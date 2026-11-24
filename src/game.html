@@ -194,7 +194,7 @@
         <button id="bR" data-dir="r">▶<small>右へ</small></button>
         <button id="bD" data-dir="d">▼<small>手前へ</small></button>
       </div>
-      <button id="act">下ろす<small>爪を下ろす</small></button>
+      <button id="act">取る<small>爪を下ろす</small></button>
     </div>
 
     <div id="banner"><div class="r" id="bnR"></div><div class="t" id="bnT"></div><div class="s" id="bnS"></div></div>
@@ -246,10 +246,9 @@
 var L = window.CraneLogic, T = THREE, DEG = L.DEG;
 var $ = function (id) { return document.getElementById(id); };
 var app = $('app'), canvas = $('stage');
-var Q = new URLSearchParams(location.search);
-// 確認用：?left=N 車を N 台だけにして始める／?fails=N 失敗 N 回の状態から始める（2026-11-24 にラウンド制を廃止し ?round を置き換え）
-var LEFT = L.clamp(parseInt(Q.get('left') || '0', 10) || 0, 0, 10), START_FAILS = L.clamp(parseInt(Q.get('fails') || '0', 10) || 0, 0, L.MAX_FAILS - 1);
-var SEED = parseInt(Q.get('seed') || '0', 10) || (Math.floor(Math.random() * 1e6) + 1);
+// 確認用の設定（テスト・OGP・告知動画の撮影が __crane.setup / __game.setup で決める。URL パラメータは無い：2026-11-24）
+var LEFT = 0, START_FAILS = 0; // 車を LEFT 台だけにして始める／失敗 START_FAILS 回の状態から始める
+var SEED = Math.floor(Math.random() * 1e6) + 1;
 var VOFF = 0.13; // 下の操作パネルの分、注視点を画面の上寄りに描く
 
 // ------------------------------------------------------------------ レイアウト（9:16）
@@ -264,7 +263,8 @@ function resize() {
 
 // ------------------------------------------------------------------ 効果音（WebAudio 合成）
 var Sfx = {
-  ctx: null, master: null, noiseBuf: null, motor: null, hoist: null,
+  ctx: null, master: null, noiseBuf: null, motor: null, hoist: null, t0: null,
+  now: function () { return this.t0 != null ? this.t0 : this.ctx.currentTime; }, // 告知動画の書き出しでは鳴らす時刻を外から渡す
   init: function () {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
     var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
@@ -288,13 +288,13 @@ var Sfx = {
     l.o.frequency.setTargetAtTime(l.f * pitch, t, 0.1); l.o2.frequency.setTargetAtTime(l.f * 1.5 * pitch, t, 0.1);
   },
   tone: function (f, dur, type, vol, when, slideTo) {
-    if (!this.ctx) return; var c = this.ctx, t = c.currentTime + (when || 0), o = c.createOscillator(), g = c.createGain();
+    if (!this.ctx) return; var c = this.ctx, t = this.now() + (when || 0), o = c.createOscillator(), g = c.createGain();
     o.type = type || 'square'; o.frequency.setValueAtTime(f, t); if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.2, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.05);
   },
   noise: function (dur, vol, f0, f1, q, when) {
-    if (!this.ctx) return; var c = this.ctx, t = c.currentTime + (when || 0), s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+    if (!this.ctx) return; var c = this.ctx, t = this.now() + (when || 0), s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
     s.buffer = this.noiseBuf; fl.type = 'bandpass'; fl.Q.value = q || 1; fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(f1 || f0, t + dur);
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     s.connect(fl); fl.connect(g); g.connect(this.master); s.start(t); s.stop(t + dur + 0.05);
@@ -314,7 +314,7 @@ var Sfx = {
   beep: function () { this.tone(1320, 0.07, 'square', 0.07); },
   // v2.2：低域のノイズ（爆発の「ドーン」の胴体）
   rumble: function (dur, vol, f0, f1, when) {
-    if (!this.ctx) return; var c = this.ctx, t = c.currentTime + (when || 0), s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+    if (!this.ctx) return; var c = this.ctx, t = this.now() + (when || 0), s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
     s.buffer = this.noiseBuf; s.loop = true; fl.type = 'lowpass'; fl.Q.value = 0.7; fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(f1, t + dur);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(vol * 0.35, t + dur * 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     s.connect(fl); fl.connect(g); g.connect(this.master); s.start(t); s.stop(t + dur + 0.05);
@@ -322,7 +322,7 @@ var Sfx = {
   // 爆発：衝突の「ガシャーン」→ 低い「ドーン」→ ガラスと部品の降る音 → 炎のパチパチ。激しいほど大きく長い
   explode: function (k) {
     if (!this.ctx) return;
-    var c = this.ctx, t = c.currentTime;
+    var c = this.ctx, t = this.now();
     // 一瞬だけ他の音を押さえる（ダッキング）
     this.master.gain.cancelScheduledValues(t); this.master.gain.setValueAtTime(0.55, t); this.master.gain.linearRampToValueAtTime(0.75, t + 0.02); this.master.gain.setTargetAtTime(0.55, t + 0.6, 0.5);
     this.noise(0.5, 0.9, 3800, 900, 1.5);                                     // ガシャーン（金属）
@@ -343,13 +343,35 @@ var Sfx = {
   shutter: function () { this.noise(0.035, 0.35, 4200, 3000, 2); this.tone(2200, 0.03, 'square', 0.05, 0.005); this.noise(0.06, 0.3, 2400, 1500, 2, 0.07); this.tone(1500, 0.04, 'square', 0.04, 0.075); }
 };
 
+// 告知動画用：効果音を鳴らさずに記録し（capture）、書き出し時に OfflineAudioContext で同じ関数を鳴らす（render）
+var SFX_CAP = false, SFX_Q = [], EVENTS = [];
+function emit(type, data) { var e = data || {}; e.type = type; EVENTS.push(e); if (EVENTS.length > 200) EVENTS.shift(); }
+['init', 'click', 'select', 'aim', 'clank', 'thud', 'crash', 'scrape', 'bang', 'get', 'fail', 'beep', 'explode', 'shutter'].forEach(function (name) {
+  var orig = Sfx[name];
+  Sfx[name] = function () {
+    if (SFX_CAP && this === Sfx) { if (name !== 'init') SFX_Q.push({ name: name, args: [].slice.call(arguments) }); return; }
+    return orig.apply(this, arguments);
+  };
+});
+var sfxNoise = null;
+function sfxRender(ctx, name, args, when) {
+  if (!sfxNoise || sfxNoise.ctx !== ctx) {
+    var n = ctx.sampleRate * 1.5, b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    sfxNoise = { ctx: ctx, buf: b };
+  }
+  var o = Object.create(Sfx); o.ctx = ctx; o.t0 = when; o.noiseBuf = sfxNoise.buf;
+  o.master = ctx.createGain(); o.master.gain.value = 0.55; o.master.connect(ctx.destination);
+  if (typeof o[name] === 'function' && name !== 'init') o[name].apply(o, args || []);
+}
+
 // ------------------------------------------------------------------ three.js シーン
 var renderer, scene, camera;
 resize();
 // v2.2：preserveDrawingBuffer は使わない（常時有効は描画が遅くなる）。写真は撮る瞬間にもう一度描いて、同じタスク内で読み出す
 renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true });
 var maxPR = Math.min(window.devicePixelRatio || 1, 2), curPR = maxPR, frameAvg = 16, prCooldown = 0;
-var FIXED_PR = /[?&]fixedpr\b/.test(location.search);
+var FIXED_PR = false; // 確認用：解像度の自動調整を止める（setup で指定）
 renderer.setPixelRatio(curPR); renderer.setSize(W, H, false);
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFShadowMap;
 renderer.outputColorSpace = T.SRGBColorSpace;
@@ -1160,7 +1182,7 @@ function explode(m, car, k) {
   // ---- 光・揺れ・音
   boomLight.position.set(cx, 1.6, cz); lightK = 1 + k; boomA = w.flash * 0.55; flash(1);
   state.shake = Math.max(state.shake, w.shake);
-  Sfx.explode(k);
+  Sfx.explode(k); emit('boom', { power: k });
   m.wreck = { power: k, plan: w, cx: cx, cz: cz, parts: off.length + made.length, t: 0, boom0: boomA, light0: 22 * lightK * lightK };
   if (m.tag) m.tag.visible = false;
   return m.wreck;
@@ -1200,7 +1222,7 @@ function stepWreck(dt) {
   // 照り返しの光（炎のゆらぎ）・画面の閃光
   var burning = emitters.length ? emitters[emitters.length - 1] : null;
   lightK = Math.max(0, lightK - dt * 1.6);
-  boomLight.intensity = 22 * lightK * lightK + (burning ? (5 + 3 * Math.sin(performance.now() / 47) * Math.sin(performance.now() / 113)) * (1 - burning.t / burning.burn) : 0);
+  boomLight.intensity = 22 * lightK * lightK + (burning ? (5 + 3 * Math.sin(GT * 1000 / 47) * Math.sin(GT * 1000 / 113)) * (1 - burning.t / burning.burn) : 0);
   if (boomA > 0) { boomA = Math.max(0, boomA - dt * 1.4); }
   $('boom').style.opacity = boomA;
   if (shutterA > 0) { shutterA = Math.max(0, shutterA - dt * 3); }
@@ -1402,6 +1424,7 @@ var HINTS = { kei: '軽い。背が高いので隣の屋根より上まで上げ
 /** 掴んだ時点で狙いが確定する */
 function lockTarget() {
   var car = state.car = state.aim;
+  emit('grip', { type: car.type.id });
   state.rd.car = car; state.rd.value = L.carValue(lot, car);
   // 掴んだ車の値札と隙間の数字は片付ける（地面の隙間の色は引き抜きの目安に残す）
   if (models[car.id] && models[car.id].tag) models[car.id].tag.visible = false;
@@ -1419,7 +1442,7 @@ function pop(text, sub, yFrac, hard) {
   var d = document.createElement('div'); d.className = 'pop' + (hard ? ' hard' : ''); d.appendChild(document.createTextNode(text));
   if (sub) { var s = document.createElement('small'); s.textContent = sub; d.appendChild(s); }
   d.style.top = ((yFrac || 0.36) * 100) + '%';
-  $('pops').appendChild(d); setTimeout(function () { d.remove(); }, 2300);
+  $('pops').appendChild(d); later(function () { d.remove(); }, 2.3);
 }
 function totalScore() { return state.results.reduce(function (a, r) { return a + r.score; }, 0); }
 function gapClass(g, sl) { return g == null ? 'wide' : sl < 0.15 ? 'tight' : sl < 0.3 ? 'mid' : 'wide'; }
@@ -1462,17 +1485,17 @@ function updateHud() {
   if (rd.repairs > 0) { var s2 = document.createElement('span'); s2.className = 'bad'; s2.textContent = (ld ? '　' : '') + '弁償 −' + rd.repairs + '万'; c.appendChild(s2); }
 }
 var ACT = {
-  move: ['下ろす', '爪を下ろす'], lower: ['上げる', '下降を中止'], down: ['…', '自動で掴む'], closing: ['…', '掴み中'], closed: ['…', '自動で上げる'],
+  move: ['取る', '爪を下ろす'], lower: ['上げる', '下降を中止'], down: ['…', '自動で掴む'], closing: ['…', '掴み中'], closed: ['…', '自動で上げる'],
   lift: ['…', '引き抜き中'], carry: ['置く', 'ゾーンの上で'], place: ['…', '下ろし中'], release: ['…', ''], fall: ['…', ''], get: ['…', ''], miss: ['…', '']
 };
 function updateAction() {
   var a = ACT[state.phase] || ['…', ''], btn = $('act');
-  // v2.6：手で押すのは「下ろす」「下降の中止（車に届くまで）」「置く」だけ。届いた後の掴む・上げる・空振りの戻しは自動
+  // v2.6：手で押すのは「取る」「下降の中止（車に届くまで）」「置く」だけ。届いた後の掴む・上げる・空振りの戻しは自動
   var enabled = !!L.manualAction(state.phase, !!state.aim, L.inZone(state.crane.x, state.crane.z));
   var label = a[0], sub = a[1];
   if (state.phase === 'down' && !state.gripped) { label = '…'; sub = '自動で戻す'; }
   if (state.phase === 'carry' && !enabled) { label = '運ぶ'; sub = 'ゾーンへ'; }
-  if (state.phase === 'move' && !enabled) { label = '下ろす'; sub = '車の上へ'; }
+  if (state.phase === 'move' && !enabled) { label = '取る'; sub = '車の上へ'; }
   if (btn.dataset.label !== label + sub) { btn.innerHTML = ''; btn.appendChild(document.createTextNode(label)); var s = document.createElement('small'); s.textContent = sub; btn.appendChild(s); btn.dataset.label = label + sub; }
   btn.disabled = !enabled;
 }
@@ -1562,6 +1585,7 @@ function placeBodyUnderGrip() {
 // ------------------------------------------------------------------ 接触の演出
 function contactFx(ev, x, y, z) {
   var hard = ev.kind === 'bump';
+  emit(hard ? 'bump' : 'scrape', { source: ev.source, repair: ev.repair });
   sparks(x, y, z, hard ? 60 : 26, hard ? 1.3 : 0.75);
   if (hard) { Sfx.bang(); state.shake = Math.max(state.shake, 0.45); flash(0.9); } else { Sfx.scrape(); state.shake = Math.max(state.shake, 0.15); flash(0.35); }
   addDecal(ev.car, x, y, z, hard);
@@ -1577,13 +1601,24 @@ function contactFx(ev, x, y, z) {
 var flashT = 0;
 function flash(a) { flashT = Math.max(flashT, a); }
 
+// ------------------------------------------------------------------ ゲーム内の時計（告知動画の1コマ撮影でも同じに動くよう、setTimeout・performance.now の代わりに使う）
+var GT = 0, LATER = [];
+function later(fn, sec) { LATER.push({ t: sec, fn: fn }); }
+function runLater(dt) {
+  if (!LATER.length) return;
+  var due = [];
+  LATER = LATER.filter(function (e) { e.t -= dt; if (e.t <= 0) { due.push(e); return false; } return true; });
+  due.forEach(function (e) { e.fn(); });
+}
 // ------------------------------------------------------------------ 更新
 function update(dt) {
   var ph = state.phase, p = curP(), cr = state.crane, lf = state.lift;
-  state.timer += dt;
+  state.timer += dt; GT += dt;
+  runLater(dt);
   if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('vis'); }
   if (flashT > 0) { flashT = Math.max(0, flashT - dt * 2.5); $('flash').style.opacity = flashT; }
   if (ph === 'title') { titleCam(dt); stepFx(dt); return; }
+  if (PILOT) stepPilot(dt);
   var moving = false, hoisting = 0;
   if (ph === 'move') {
     L.stepCrane(cr, state.input, dt, false);
@@ -1670,7 +1705,7 @@ function update(dt) {
       if (state.stopKind === 'abort') { setPhase('move'); pop('下降を中止', '失敗には数えない', 0.38); }
       else {
         // 掴めなかった＝失敗1回。3回目ならゲームオーバー（カードを出す）、それまではその場で続行
-        state.fails++;
+        state.fails++; emit('missGrab', { fails: state.fails });
         if (state.fails >= L.MAX_FAILS) turnEnd('miss');
         else { state.results.push(makeResult('miss')); state.rd = { car: null, value: 0, repairs: 0, log: [] }; setPhase('move'); pop('掴めなかった', '失敗 ' + state.fails + '/' + L.MAX_FAILS, 0.38, true); }
       }
@@ -1775,6 +1810,7 @@ function makeResult(kind) {
 function gameOutcome() { return L.outcome(state.fails, L.presentCars(lot).length); }
 function turnEnd(kind) {
   var car = state.car, res = makeResult(kind);
+  emit(kind, { fails: state.fails + (kind === 'fall' ? 1 : 0) });
   if (kind === 'fall') state.fails++; // 落とした＝失敗1回（掴めなかった分は miss の時点で数える）
   if ((kind === 'get' || kind === 'fall') && car) car.present = false; // 取った車・落とした車は駐車場から消える
   if (kind === 'get') {
@@ -1792,7 +1828,7 @@ function turnEnd(kind) {
   state.phase = kind === 'get' ? 'get' : kind === 'fall' ? 'fallen' : 'missed';
   updateAction(); updateHud();
   var bg = $('big'); bg.textContent = kind === 'get' ? 'GET!' : kind === 'fall' ? (state.wreck ? '大破…' : '落下…') : '取れず…'; bg.className = kind === 'get' ? 'vis' : 'vis fail';
-  setTimeout(function () { showCard(res); }, kind === 'get' ? 2200 : 1400);
+  later(function () { showCard(res); }, kind === 'get' ? 2.2 : 1.4);
 }
 function showCard(res) {
   if (state.lastResult !== res) return;
@@ -1868,7 +1904,7 @@ function updateGauges() {
 }
 
 // ------------------------------------------------------------------ 描画同期
-var CAM = { d: +(Q.get('cd') || 25), el: +(Q.get('cel') || 56) * DEG, moveD: +(Q.get('cmd') || 33), moveEl: 66 * DEG, moveZ: [-8.5, -3] };
+var CAM = { d: 25, el: 56 * DEG, moveD: 33, moveEl: 66 * DEG, moveZ: [-8.5, -3] };
 var zoomCur = 1, camPos = new T.Vector3(0, 30, 14), camLook = new T.Vector3(0, 0, -5), titleAng = 0;
 function titleCam(dt) {
   titleAng += dt * 0.1;
@@ -1879,7 +1915,7 @@ var CAM_OVR = null;
 function sync(dt) {
   var cr = state.crane;
   crane3.bridge.position.x = cr.x; crane3.trolley.position.z = cr.z;
-  crane3.lamp.material.emissiveIntensity = Math.abs(cr.vx) + Math.abs(cr.vz) > 0.05 ? (Math.sin(performance.now() / 120) > 0 ? 2 : 0.2) : 0.3;
+  crane3.lamp.material.emissiveIntensity = Math.abs(cr.vx) + Math.abs(cr.vz) > 0.05 ? (Math.sin(GT * 1000 / 120) > 0 ? 2 : 0.2) : 0.3;
   var tp = new T.Vector3(cr.x, L.CRANE.topY, cr.z), e = L.clawEnd(cr, state.cable, state.swing), end = new T.Vector3(e.x, e.y, e.z);
   [[cableMesh, -0.3], [cable2, 0.3]].forEach(function (c) {
     var a = tp.clone().add(new T.Vector3(c[1], 0.6, 0)), b2 = end.clone().add(new T.Vector3(c[1] * 0.6, 0, 0));
@@ -1907,7 +1943,7 @@ function sync(dt) {
     laser.position.set(e.x, (topY + hy) / 2, e.z); laser.scale.set(1, Math.max(0.01, topY - hy), 1);
     var onT = aimCar && L.inFootprint(aimCar, e.x, e.z, 0);
     aim.position.set(mp.x, hy, mp.z); aim.material.color.set(onT ? 0xffffff : 0xff9a8a);
-    aim.scale.setScalar(state.phase === 'lower' ? 0.8 : 1 + 0.08 * Math.sin(performance.now() / 160));
+    aim.scale.setScalar(state.phase === 'lower' ? 0.8 : 1 + 0.08 * Math.sin(GT * 1000 / 160));
     var reach = p ? L.clawReach(p) : 1.3, fz = p ? L.fingerZ(p) : 0.42, i = 0; // 車種未定は Claw.configure(null) と同じ既定値
     for (var sx = -1; sx <= 1; sx += 2) for (var sz = -1; sz <= 1; sz += 2) {
       var tx = e.x + sx * reach, tz = e.z + sz * fz, bad = null;
@@ -1917,7 +1953,7 @@ function sync(dt) {
     }
   }
   // 狙いの枠の点滅（v2.4：狙いの値札は出さないので、薄くする処理は不要）
-  if (selFrame.visible) selFrame.material.opacity = 0.6 + 0.4 * Math.sin(performance.now() / 180);
+  if (selFrame.visible) selFrame.material.opacity = 0.6 + 0.4 * Math.sin(GT * 1000 / 180);
   // カメラ
   if (state.phase !== 'title') {
     var ph = state.phase, fx0 = cr.x, fz0 = cr.z, zoom = 1, d = CAM.d, el = CAM.el, follow = 0.75;
@@ -1946,7 +1982,7 @@ function sync(dt) {
 }
 
 // ------------------------------------------------------------------ ループ
-var HIRES = false, PAUSED = false;
+var HIRES = false, PAUSED = false, MANUAL = false;
 function adaptResolution(rawDt) {
   if (FIXED_PR || HIRES) return;
   frameAvg += (rawDt * 1000 - frameAvg) * 0.1; prCooldown -= rawDt;
@@ -1967,7 +2003,7 @@ function frame() {
   var raw = clock.getDelta(), dt = Math.min(0.1, raw);
   adaptResolution(Math.min(raw, 0.5));
   var n = Math.max(1, Math.ceil(dt / (1 / 60))), h = dt / n;
-  if (!PAUSED) { for (var i = 0; i < n; i++) update(h); sync(dt); renderer.render(scene, camera); if (TRACE) traceFrame(); }
+  if (!PAUSED && !MANUAL) { for (var i = 0; i < n; i++) update(h); sync(dt); renderer.render(scene, camera); if (TRACE) traceFrame(); }
   requestAnimationFrame(frame);
 }
 window.addEventListener('resize', resize);
@@ -1976,10 +2012,21 @@ buildLotModels();
 L.presentCars(lot).forEach(function (c) { models[c.id].tag.visible = false; });
 show('title', true);
 
+/** 確認用の設定（タイトル画面で呼ぶ）：seed＝配置、left＝車の台数、fails＝最初の失敗の数、fixedPR＝解像度を固定 */
+function setupForCheck(o) {
+  o = o || {};
+  if (o.seed) SEED = o.seed | 0;
+  LEFT = L.clamp(o.left | 0, 0, 10); START_FAILS = L.clamp(o.fails | 0, 0, L.MAX_FAILS - 1);
+  if (o.fixedPR != null) FIXED_PR = !!o.fixedPR;
+  lot = L.makeLot(SEED); buildLotModels();
+  L.presentCars(lot).forEach(function (c) { models[c.id].tag.visible = false; });
+  return SEED;
+}
 // 自動テスト用の読み取り口（ゲーム進行には影響しない）
 var _pv = new T.Vector3();
 window.__crane = {
   get phase() { return state.phase; },
+  setup: setupForCheck,
   info: function () {
     var lf = state.lift, ld = lf && lf.load, cr = state.crane, car = state.car, e = L.clawEnd(cr, state.cable, state.swing);
     return {
@@ -2040,6 +2087,93 @@ window.__crane = {
   tags: function (on) { for (var k in models) if (models[k].tag) models[k].tag.visible = !!on; renderer.render(scene, camera); }, // OGP 撮影用：値札をまとめて隠す／出す（一時停止中に使う）
   cam: function (v) { CAM_OVR = v || null; sync(0); renderer.render(scene, camera); }, // 確認用：[x,y,z, 注視x,y,z] でカメラを固定（null で戻す）
   hiRes: function (on) { HIRES = !!on; renderer.setPixelRatio(on ? maxPR : curPR); renderer.setSize(W, H, false); renderer.render(scene, camera); }
+};
+
+// ------------------------------------------------------------------ 告知動画の撮影用（tools/promo）：1コマずつ進める・自動運転・出来事と効果音の記録
+// 遊び方・見た目は変えない。手で遊ぶときは使われない
+var PILOT = null;
+var PAD = { x: { '1': 'bR', '-1': 'bL' }, z: { '1': 'bD', '-1': 'bU' } };
+function emptyAmpDeg() { var s = state.swing, w = Math.sqrt(9.8 / L.swingLeff(null, state.cable)); return Math.hypot(Math.hypot(s.tx, s.wx / w), Math.hypot(s.tz, s.wz / w)) / DEG; }
+function pilotPress(cmd) {
+  state.input.x = cmd.x; state.input.z = cmd.z;
+  ['bL', 'bR', 'bU', 'bD'].forEach(function (id) { $(id).classList.remove('on'); });
+  if (cmd.x) $(PAD.x[cmd.x]).classList.add('on');
+  if (cmd.z) $(PAD.z[cmd.z]).classList.add('on');
+}
+function endPilot() { PILOT = null; pilotPress({ x: 0, z: 0 }); emit('arrived'); }
+function stepPilot(dt) {
+  var P = PILOT, cr = state.crane, cmd = { x: 0, z: 0 };
+  if (state.phase !== P.phase) return endPilot();
+  P.t += dt;
+  if (P.mode === 'carry') {
+    cmd = P.drv(cr, state.swing, state.cable, curP(), dt);
+    if (P.drv.state.done) return endPilot();
+  } else if (P.mode === 'pump') {
+    cmd.z = P.t < 0.9 ? 1 : (state.swing.wz > 0 ? -1 : 1);
+  } else { // goto：軸ごとに「押す→制動距離で離す→止まる」（テストの driveTo と同じ）。passes 回くり返し、毎回揺れが収まるのを待つ
+    var acc = L.CRANE.accelEmpty * L.CRANE.brake, axes = ['x', 'z'];
+    while (P.ax < 2) {
+      var a = axes[P.ax], d = (a === 'x' ? P.tx : P.tz) - cr[a], v = cr['v' + a];
+      if (P.st === 'start') { if (Math.abs(d) <= P.tol || P.it >= 60) { P.ax++; P.it = 0; continue; } P.dir = d > 0 ? 1 : -1; P.st = 'push'; P.it++; }
+      if (P.st === 'push') { if (d * P.dir <= v * v / (2 * acc) + Math.abs(v) * 0.025 + P.tol * 0.3) P.st = 'coast'; else cmd[a] = P.dir; break; }
+      if (P.st === 'coast') { if (Math.abs(cr.vx) + Math.abs(cr.vz) < 1e-6) P.st = 'start'; break; }
+    }
+    if (P.ax >= 2) {
+      if (P.settle && emptyAmpDeg() > P.settle) { pilotPress(cmd); return; }
+      if (++P.pass >= P.passes) return endPilot();
+      P.ax = 0; P.st = 'start'; P.it = 0;
+    }
+  }
+  pilotPress(cmd);
+}
+window.__game = {
+  setup: setupForCheck,
+  manual: function (on) {
+    MANUAL = !!on;
+    if (on) { HIRES = true; renderer.setPixelRatio(maxPR); renderer.setSize(W, H, false); } else { HIRES = false; clock.getDelta(); }
+  },
+  step: function (dt) {
+    var n = Math.max(1, Math.ceil(dt * 60 - 1e-6)), h = dt / n;
+    for (var i = 0; i < n; i++) update(h);
+    sync(dt); renderer.render(scene, camera);
+  },
+  state: function () {
+    return {
+      phase: state.phase, fails: state.fails, left: L.presentCars(lot).length, outcome: gameOutcome(), aimId: state.aimId, pilot: PILOT ? PILOT.mode : null,
+      crane: { x: state.crane.x, z: state.crane.z }, inZone: L.inZone(state.crane.x, state.crane.z), car: state.car ? state.car.type.id : null,
+      cars: lot.cars.filter(function (c) { return c.present; }).map(function (c) { return { id: c.id, type: c.type.id, row: c.row, col: c.col, x: c.x, z: c.z, value: L.carValue(lot, c) }; }),
+      results: state.results.map(function (r) { return r.kind; }), total: totalScore()
+    };
+  },
+  start: function () { startGame(); },
+  act: function () { $('act').classList.add('on'); later(function () { $('act').classList.remove('on'); }, 0.18); action(); },
+  next: function () { Sfx.init(); Sfx.click(); nextTurn(); },
+  /** 車 id の重心の真上（幅方向に off m ずらす）へ空の爪を運ぶ */
+  aimAt: function (id, off, opt) {
+    var c = lot.cars[id], o = opt || {};
+    PILOT = { mode: 'goto', phase: 'move', tx: c.x + (off || 0), tz: L.comWorld(c)[1], tol: o.tol || 0.02, settle: o.settle == null ? 0.12 : o.settle, passes: o.passes || 2, pass: 0, ax: 0, st: 'start', it: 0, t: 0 };
+  },
+  carryToZone: function () { PILOT = { mode: 'carry', phase: 'carry', drv: L.carefulDriver((Z.x0 + Z.x1) / 2, (Z.z0 + Z.z1) / 2), t: 0 }; },
+  pump: function () { PILOT = { mode: 'pump', phase: 'carry', t: 0 }; },
+  stopPilot: function () { if (PILOT) endPilot(); },
+  /** 爪の指先が隣の車に乗り上げる（掴めない失敗になる）位置を探す */
+  bumpSpot: function (id) {
+    var c = lot.cars[id], nb = L.neighbors(lot, c), cz = L.comWorld(c)[1];
+    for (var side of [['left', -1], ['right', 1]]) {
+      if (!nb[side[0]]) continue;
+      for (var off = 0.2; off < 1.6; off += 0.02) {
+        if (L.carUnder(lot, c.x + side[1] * (off + 0.04), cz) !== c) break;
+        if (L.simulateDescent(lot, c, c.x + side[1] * off, cz).stop === 'neighbor') return side[1] * off;
+      }
+    }
+    return null;
+  },
+  drainEvents: function () { var e = EVENTS; EVENTS = []; return e; },
+  audio: {
+    capture: function (on) { SFX_CAP = !!on; if (on && Sfx.motor) { Sfx.setLoop(Sfx.motor, 0, 1); Sfx.setLoop(Sfx.hoist, 0, 1); } },
+    drain: function () { var q = SFX_Q; SFX_Q = []; return q; },
+    render: sfxRender
+  }
 };
 
 requestAnimationFrame(frame);

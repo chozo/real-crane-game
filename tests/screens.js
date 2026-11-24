@@ -9,7 +9,7 @@ const { chromium } = require('playwright-core');
 const OUT = path.join(__dirname, 'screenshots');
 fs.mkdirSync(OUT, { recursive: true });
 const FILE = path.resolve(__dirname, '../dist/real-crane-game/index.html'); // favicon などを同じフォルダに置いた公開用の出力（npm run build で作る）
-const URL = 'file://' + FILE + '?seed=1';
+const URL = 'file://' + FILE; // 配置は __crane.setup({ seed: 1 })（URL パラメータは 2026-11-24 に廃止）
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const errors = [], external = [], checks = [];
 const log = (...a) => console.log(...a);
@@ -243,6 +243,7 @@ async function findBumpSpot(page) {
   const t0 = Date.now();
   await page.goto(URL);
   await waitFor(page, () => window.__crane && window.__crane.phase === 'title');
+  await page.evaluate(() => window.__crane.setup({ seed: 1 }));
   await sleep(800);
   log('[タイトル]');
   await shot(page, '00_title');
@@ -533,11 +534,12 @@ async function findBumpSpot(page) {
   i = await info(page);
   check('もう一度：失敗0回・10台・駐車場が元に戻る', i.fails === 0 && i.left === 10 && i.results.length === 0 && i.cars.every(c => c.present && c.damage === 0));
 
-  // ---------------- パーフェクト／クリア（確認用 ?left=1：車1台だけの駐車場で、最後の1台を取りきる）
-  for (const [q, want, fails] of [['&left=1', 'PERFECT!', 0], ['&left=1&fails=1', 'CLEAR!', 1]]) {
+  // ---------------- パーフェクト／クリア（確認用 setup({ left: 1 })：車1台だけの駐車場で、最後の1台を取りきる）
+  for (const [q, want, fails] of [[{ left: 1 }, 'PERFECT!', 0], [{ left: 1, fails: 1 }, 'CLEAR!', 1]]) {
     log(`[${want}]`);
-    await page.goto(URL + q);
+    await page.goto(URL);
     await waitFor(page, () => window.__crane && window.__crane.phase === 'title');
+    await page.evaluate(q => window.__crane.setup(Object.assign({ seed: 1 }, q)), q);
     await page.click('#startBtn');
     await roundStart(page);
     i = await info(page);

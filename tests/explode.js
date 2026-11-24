@@ -1,6 +1,6 @@
 // v2.2 画面確認：わざと落として爆発させる（運搬の高さから、揺れを育てて振り落とす）→ 爆発の瞬間・直後の煙・失敗の写真カード
 // v2.5：失敗写真は爆発のピーク（火の玉が最大・部品が飛び散っている最中）。毎フレーム火の玉の大きさと宙の部品数を記録して、撮った瞬間がピークか確かめる
-// 実行: node tests/explode.js   （?fails=2 で「あと1回失敗でゲームオーバー」から始め、落下＝3回目の失敗で結果画面まで進む）
+// 実行: node tests/explode.js   （setup({ fails: 2 }) で「あと1回失敗でゲームオーバー」から始め、落下＝3回目の失敗で結果画面まで進む）
 // 十字パッドは本物のボタン要素へ PointerEvent を dispatch、アクションは本物のマウスでクリック（screens.js と同じ流儀）。
 const path = require('path');
 const fs = require('fs');
@@ -9,7 +9,7 @@ const { chromium } = require('playwright-core');
 const OUT = path.join(__dirname, 'screenshots');
 fs.mkdirSync(OUT, { recursive: true });
 const FILE = path.resolve(__dirname, '../dist/real-crane-game/index.html'); // favicon などを同じフォルダに置いた公開用の出力（npm run build で作る）
-const URL = 'file://' + FILE + '?seed=1&fails=2';
+const URL = 'file://' + FILE;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const errors = [], checks = [];
 const log = (...a) => console.log(...a);
@@ -52,6 +52,7 @@ async function pauseWhen(page, fn) {
   page.on('console', m => { if (m.type() === 'error') errors.push('console.error: ' + m.text()); });
   await page.goto(URL);
   await waitFor(page, () => window.__crane && window.__crane.phase === 'title');
+  await page.evaluate(() => window.__crane.setup({ seed: 1, fails: 2 }));
   await page.click('#startBtn');
   await waitFor(page, () => window.__crane.phase === 'move');
   await sleep(2400);

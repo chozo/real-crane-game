@@ -5,7 +5,7 @@ const fs = require('fs');
 const { chromium } = require('playwright-core');
 const OUT = path.join(__dirname, 'screenshots');
 fs.mkdirSync(OUT, { recursive: true });
-const URL = 'file://' + path.resolve(__dirname, '../dist/real-crane-game/index.html') + '?seed=1&fixedpr';
+const URL = 'file://' + path.resolve(__dirname, '../dist/real-crane-game/index.html');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const errors = [];
 (async () => {
@@ -15,6 +15,7 @@ const errors = [];
   page.on('console', m => { if (m.type() === 'error') errors.push('console.error: ' + m.text()); });
   await page.goto(URL);
   await page.waitForFunction(() => window.__crane && window.__crane.phase === 'title');
+  await page.evaluate(() => window.__crane.setup({ seed: 1, fixedPR: true }));
   await page.click('#startBtn');
   await page.waitForFunction(() => window.__crane.phase === 'move');
   await page.waitForFunction(() => !document.getElementById("banner").classList.contains("vis"), null, { timeout: 20000 }); await sleep(600); // ラウンド開始の案内が消えるまで

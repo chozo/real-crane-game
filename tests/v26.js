@@ -9,7 +9,7 @@ const { chromium } = require('playwright-core');
 
 const OUT = path.join(__dirname, 'screenshots', 'v26');
 fs.mkdirSync(OUT, { recursive: true });
-const NEW = 'file://' + path.resolve(__dirname, '../dist/real-crane-game/index.html') + '?seed=1';
+const NEW = 'file://' + path.resolve(__dirname, '../dist/real-crane-game/index.html'); // 配置は __crane.setup({ seed: 1 })
 const OLD = 'file://' + path.resolve(__dirname, 'tmp/v25/index.html') + '?seed=1';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const errors = [], checks = [];
@@ -31,6 +31,7 @@ const press = (page, id, on) => page.evaluate(({ id, on }) => document.getElemen
 async function start(page, url) {
   await page.goto(url);
   await waitFor(page, () => window.__crane && window.__crane.phase === 'title');
+  await page.evaluate(() => window.__crane.setup && window.__crane.setup({ seed: 1 })); // v2.5 の旧ビルドは ?seed=1 で決まる
   await page.click('#startBtn');
   await waitFor(page, () => window.__crane.phase === 'move');
   await sleep(2400); // バナーが消えるまで
@@ -181,7 +182,7 @@ async function sheet(browser, files, labels, out, cols) {
 
   // ---------------- C. 下降の中止（車に届く前）
   log('[C 下降の中止]');
-  await page.goto(NEW); await waitFor(page, () => window.__crane && window.__crane.phase === 'title'); await page.click('#startBtn'); await waitFor(page, () => window.__crane.phase === 'move'); await sleep(2400);
+  await page.goto(NEW); await waitFor(page, () => window.__crane && window.__crane.phase === 'title'); await page.evaluate(() => window.__crane.setup({ seed: 1 })); await page.click('#startBtn'); await waitFor(page, () => window.__crane.phase === 'move'); await sleep(2400);
   await press(page, 'bU', true); await waitFor(page, () => window.__crane.info().aimId != null, null, 10000); await press(page, 'bU', false);
   await waitFor(page, () => { const c = window.__crane.info().crane; return !c.vx && !c.vz; });
   await waitFor(page, () => window.__crane.info().aimId != null);

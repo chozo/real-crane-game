@@ -1,5 +1,5 @@
 // OGP 画像（public/ogp.png、1200×630）と apple-touch-icon（public/apple-touch-icon.png、180×180）を作る。
-// 1) 実際のゲーム（index.html?seed=N）で一番高い車を吊り上げ、運搬の高さで止めて、UI を隠して 3D 画面だけ撮る
+// 1) 実際のゲーム（__crane.setup({ seed: N })）で一番高い車を吊り上げ、運搬の高さで止めて、UI を隠して 3D 画面だけ撮る
 // 2) その写真を背景に、ポップなタイトル・一言・URL を重ねた 1200×630 の HTML を描いて撮る
 // 使い方：npm run build && npm run ogp   （撮影カメラは CAM で調整。seed は SEED）
 import { createRequire } from 'node:module';
@@ -37,8 +37,9 @@ async function captureScene(browser) {
   const page = await browser.newPage({ viewport: { width: 450, height: 800 }, deviceScaleFactor: 3 });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.goto('file://' + path.join(ROOT, 'index.html') + `?seed=${SEED}&fixedpr`);
+  await page.goto('file://' + path.join(ROOT, 'index.html'));
   await page.waitForFunction(() => window.__crane && window.__crane.phase === 'title', null, { timeout: 120000 });
+  await page.evaluate(seed => window.__crane.setup({ seed, fixedPR: true }), SEED);
   await page.click('#startBtn');
   await page.waitForFunction(() => window.__crane.phase === 'move', null, { timeout: 60000 });
   await sleep(2000);

@@ -7,3 +7,4 @@ tests/tmp/
 tools/ogp/out/
 # build.js が dist/ と同じ内容をルートにも書く（ローカル確認用の生成物）
 /index.html
+tools/promo/bgm.wav
