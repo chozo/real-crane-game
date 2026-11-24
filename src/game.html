@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>現実版クレーンゲーム 駐車場編</title>
-<meta name="description" content="駐車場にびっしり停まった本物サイズの車を、巨大クレーンで1台ずつ釣り上げる3Dミニゲーム。囲まれた車ほど高いけど、隣にぶつけたら弁償。">
+<meta name="description" content="駐車場にびっしり停まった本物サイズの車を、巨大クレーンで1台ずつ釣り上げる3Dミニゲーム。高い車を狙え。でも隣にぶつけたら弁償。">
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <meta name="theme-color" content="#ffcc1a">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="現実版クレーンゲーム 駐車場編">
 <meta property="og:title" content="現実版クレーンゲーム 駐車場編">
-<meta property="og:description" content="駐車場にびっしり停まった本物サイズの車を、巨大クレーンで1台ずつ釣り上げる3Dミニゲーム。囲まれた車ほど高いけど、隣にぶつけたら弁償。">
+<meta property="og:description" content="駐車場にびっしり停まった本物サイズの車を、巨大クレーンで1台ずつ釣り上げる3Dミニゲーム。高い車を狙え。でも隣にぶつけたら弁償。">
 <meta property="og:url" content="https://game.chozo.net/real-crane-game/">
 <meta property="og:image" content="https://game.chozo.net/real-crane-game/ogp.png">
 <meta property="og:image:width" content="1200">
@@ -77,7 +77,6 @@
   /* v2.1：爪の真下の車（狙い）の情報。HUD の下に常時 */
   #hAim { margin-top:calc(var(--u)*1); display:inline-flex; align-items:center; gap:calc(var(--u)*2.2); background:rgba(255,250,236,.94); color:var(--ink);
     border-radius:calc(var(--u)*2.4); padding:calc(var(--u)*1) calc(var(--u)*2.6); font-size:calc(var(--u)*3.7); font-weight:800; white-space:nowrap; box-shadow:0 3px 10px rgba(0,0,0,.3); }
-  #hAim .stars { color:#e0a100; letter-spacing:.05em; } #hAim .stars i { color:#cfc6b0; font-style:normal; }
   #hAim .k { color:#6b6455; font-weight:700; }
   #hAim b.tight { color:#d8321b; } #hAim b.mid { color:#c98400; } #hAim b.wide { color:#2f8a3c; }
   #hAim.none { background:rgba(16,20,26,.72); color:var(--cream); }
@@ -211,7 +210,7 @@
       <div class="logo"><small>REAL SIZE</small><h1>現実版<br>クレーン<br>ゲーム<br><em>駐車場編</em></h1>
         <p><span class="nw">びっしり停まった駐車場から、</span><br><span class="nw">好きな1台を巨大クレーンで釣り上げろ。</span></p></div>
       <div class="foot">
-        <div class="how"><span class="nw">囲まれた車ほど高い。</span><span class="nw">でも隣にぶつけたら弁償。</span></div>
+        <div class="how"><span class="nw">高い車を狙え。</span><span class="nw">でも隣にぶつけたら弁償。</span></div>
         <button class="big" id="startBtn">スタート</button>
       </div>
     </div>
@@ -904,18 +903,17 @@ function carModel(car) {
   return { group: g, body: body, hit: hit, mats: mats, decals: [], bodyM: bodyM, trimM: CM.trim, look: look, wheelR: r };
 }
 
-// 値札（各車の上：価値と囲まれ度）
+// 値札（各車の上：価値。傷があれば「傷あり」）
 function tagTexture(car, selected) {
-  var v = L.carValue(lot, car), s = L.surround(lot, car), dmg = car.damage > 0.001;
+  var v = L.carValue(lot, car), dmg = car.damage > 0.001;
   return canvasTex(256, 128, function (g, w, h) {
     g.fillStyle = selected ? '#ffcc1a' : 'rgba(255,250,236,.95)';
     g.beginPath(); g.roundRect(6, 6, w - 12, 92, 18); g.fill();
     g.beginPath(); g.moveTo(w / 2 - 14, 96); g.lineTo(w / 2 + 14, 96); g.lineTo(w / 2, 120); g.closePath(); g.fill();
     g.strokeStyle = selected ? '#7a4a00' : 'rgba(0,0,0,.35)'; g.lineWidth = 4; g.beginPath(); g.roundRect(6, 6, w - 12, 92, 18); g.stroke();
     g.fillStyle = dmg ? '#c0301c' : '#1d1a14'; g.font = '900 62px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText('¥' + v + '万', w / 2, 40);
-    var st = ''; for (var i = 0; i < 4; i++) st += i < s.stars ? '★' : '☆';
-    g.font = '900 28px sans-serif'; g.fillStyle = '#d08a00'; g.fillText(st + (dmg ? ' 傷' : ''), w / 2, 82);
+    g.fillText('¥' + v + '万', w / 2, dmg ? 40 : 52);
+    if (dmg) { g.font = '900 28px sans-serif'; g.fillStyle = '#c0301c'; g.fillText('傷あり', w / 2, 82); }
   });
 }
 function updateTag(car) {
@@ -1422,18 +1420,15 @@ function updateHud() {
   $('hTries').textContent = rd ? 'のこり ' + t : '';
   var c = $('hCond'); c.innerHTML = '';
   if (!car) {
-    // 掴む前：爪の真下の車（狙い）の価値・囲まれ度・左右の隙間をライブで
+    // 掴む前：爪の真下の車（狙い）の価値・左右の隙間をライブで
     var a = state.aim; aimBox.innerHTML = ''; $('hAimWrap').style.display = '';
     if (!a) {
       $('hName').textContent = '爪の下に車なし'; $('hVal').style.display = 'none';
       aimBox.className = 'none'; aimBox.textContent = '車の真上へ動かすと狙いになる';
     } else {
-      var s = L.surround(lot, a), g = L.gaps(lot, a), sl = L.clawSlack(lot, a);
+      var g = L.gaps(lot, a), sl = L.clawSlack(lot, a);
       $('hName').textContent = a.type.name; $('hVal').style.display = ''; $('hVal').textContent = '¥' + L.carValue(lot, a) + '万';
       aimBox.className = '';
-      var st = document.createElement('span'); st.className = 'stars'; st.appendChild(document.createTextNode('★'.repeat(s.stars)));
-      var off = document.createElement('i'); off.textContent = '★'.repeat(4 - s.stars); st.appendChild(off); aimBox.appendChild(st);
-      var m = document.createElement('span'); m.textContent = '×' + s.mult.toFixed(2); aimBox.appendChild(m);
       var gk = document.createElement('span'); gk.className = 'k'; gk.textContent = '隙間'; aimBox.appendChild(gk);
       var gv = document.createElement('span');
       [['左', g.left, sl.left], ['右', g.right, sl.right]].forEach(function (q, k) {
@@ -1951,12 +1946,12 @@ window.__crane = {
     return {
       render: { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, texs: renderer.info.memory.textures, frameAvg: frameAvg }, carMeshes: (function () { var n = 0; for (var id in models) models[id].body.traverse(function (o) { if (o.isMesh) n++; }); return n; })(),
       round: state.round, seed: SEED, tries: state.tries, audio: Sfx.ctx ? Sfx.ctx.state : null, selId: state.aimId, aimId: state.aimId,
-      aim: state.aim && (function (a) { var g = L.gaps(lot, a), s = L.surround(lot, a); return { id: a.id, type: a.type.id, x: a.x, z: a.z, com: L.comWorld(a), value: L.carValue(lot, a), stars: s.stars, mult: s.mult, gaps: g }; })(state.aim),
+      aim: state.aim && (function (a) { var g = L.gaps(lot, a); return { id: a.id, type: a.type.id, x: a.x, z: a.z, com: L.comWorld(a), value: L.carValue(lot, a), gaps: g }; })(state.aim),
       hud: { name: $('hName').textContent, val: $('hVal').style.display === 'none' ? '' : $('hVal').textContent, aim: $('hAimWrap').style.display === 'none' ? '' : $('hAim').textContent },
       crane: { x: cr.x, z: cr.z, vx: cr.vx, vz: cr.vz }, cable: state.cable, claw: { x: e.x, y: e.y, z: e.z }, gripped: state.gripped, stopKind: state.stopKind,
       target: car && { id: car.id, type: car.type.id, x: car.x, z: car.z, com: L.comWorld(car), value: state.rd.value, flip: car.flip },
       clawType: curP() ? curP().id : null,
-      cars: lot.cars.map(function (c) { return { id: c.id, type: c.type.id, row: c.row, col: c.col, x: c.x, z: c.z, present: c.present, value: L.carValue(lot, c), damage: c.damage, stars: L.surround(lot, c).stars }; }),
+      cars: lot.cars.map(function (c) { return { id: c.id, type: c.type.id, row: c.row, col: c.col, x: c.x, z: c.z, present: c.present, value: L.carValue(lot, c), damage: c.damage }; }),
       inZone: L.inZone(cr.x, cr.z), swingDeg: L.swingMag(state.swing) / DEG,
       swingAmpDeg: (function () { var s = state.swing, w = lf ? L.swingOmega(car.type, state.cable) : Math.sqrt(9.8 / L.swingLeff(null, state.cable)); return Math.hypot(Math.hypot(s.tx, s.wx / w), Math.hypot(s.tz, s.wz / w)) / DEG; })(),
       load: ld && { e: ld.e.slice(), tiltDeg: Math.hypot(ld.phi[0], ld.phi[1]) / DEG, maxTiltDeg: ld.maxTilt / DEG, maxSwingDeg: ld.maxSwing / DEG, slipping: ld.slipping, detached: ld.detached, cause: ld.cause || null, condition: ld.condition, inSlot: lf.inSlot, bottomY: L.loadBottomY(lf) },

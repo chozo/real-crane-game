@@ -4,7 +4,7 @@
  * 座標：x＝レール方向（画面の左右）、z＝トロリー方向（画面の前後、+z が手前）、y＝上。
  * 車の向き yaw は three.js の rotation.y と同じ（ローカル +x＝長手方向）。駐車場の車は yaw=π/2（長手が z 方向）。
  * v1 から継続：クレーン移動、振り子、重心ずれ→傾き→滑落、着地の衝撃、スコア。
- * v2 で追加：駐車場の生成、囲まれ度と価値、爪の下降時の接触、吊った車と隣の車の接触（こすった／ぶつけた）。
+ * v2 で追加：駐車場の生成、車の価値（囲まれ度は 2026-11-24 に廃止）、爪の下降時の接触、吊った車と隣の車の接触（こすった／ぶつけた）。
  */
 (function (root) {
   'use strict';
@@ -40,10 +40,10 @@
       colors: [0x2f5a3c, 0x8a6a4a, 0xdcdcd6, 0x1f3f6e] },
     { id: 'open', name: 'オープンカー', base: 300, mass: 1150, L: 3.95, W: 1.74, H: 1.22, lowTop: 0.86, cabL: 0, cabX: 0,
       com: [0.18, 0], comH: 0.40, grip: 0.62, tiltLimit: 20 * DEG, swingLimit: 22 * DEG, damp: 0.165, scratchK: 1.3,
-      colors: [0xd8b02a, 0x22a0c8, 0xb02a4a] },
+      colors: [0x2f6fd8, 0xf4f4f0] }, // オープンカーは青か白（2026-11-24 ユーザー指定）
     { id: 'sports', name: 'スポーツカー', base: 400, mass: 1400, L: 4.45, W: 1.90, H: 1.18, lowTop: 0.72, cabL: 0.36, cabX: -0.04,
       com: [-0.30, 0], comH: 0.38, grip: 0.62, tiltLimit: 18 * DEG, swingLimit: 21 * DEG, damp: 0.18, scratchK: 1.5,
-      colors: [0xe02818, 0xf2c200, 0x111316] }
+      colors: [0xe02818, 0xf2c200] }  // スポーツカーは赤か黄色（2026-11-24 ユーザー指定）
   ];
   function typeById(id) { for (var i = 0; i < CAR_TYPES.length; i++) if (CAR_TYPES[i].id === id) return CAR_TYPES[i]; return null; }
   /** 屋根（掴む面）の高さ。l は車の前（ノーズ）向きを + とした長手位置 */
@@ -108,14 +108,8 @@
   function neighbors(lot, car) {
     return { left: carAt(lot, car.row, car.col - 1), right: carAt(lot, car.row, car.col + 1), across: carAt(lot, 1 - car.row, car.col) };
   }
-  /** 囲まれ度：左右の車（各 +0.3）、背中合わせの車（+0.2）、奥の列（+0.15） */
-  function surround(lot, car) {
-    var nb = neighbors(lot, car);
-    var side = (nb.left ? 1 : 0) + (nb.right ? 1 : 0), across = nb.across ? 1 : 0, back = car.row === 0 ? 1 : 0;
-    var mult = 1 + 0.3 * side + 0.2 * across + 0.15 * back;
-    return { side: side, across: across, back: back, stars: side + across + back, mult: Math.round(mult * 100) / 100 };
-  }
-  function carValue(lot, car) { return Math.round(car.type.base * surround(lot, car).mult * (1 - clamp(car.damage, 0, 0.9))); }
+  /** 価値＝基本価格 ×（1 − 傷）。2026-11-24 にユーザー指定で「囲まれ度」（隣の車の数で価値が上がる倍率と★）を廃止。lot は呼び出し互換のため残す */
+  function carValue(lot, car) { return Math.round(car.type.base * (1 - clamp(car.damage, 0, 0.9))); }
   /** 左右の隙間（m）。隣が空なら null（＝広い） */
   function gaps(lot, car) {
     var nb = neighbors(lot, car), W = car.type.W;
@@ -674,7 +668,7 @@
     G: G, DEG: DEG, CAR_TYPES: CAR_TYPES, LOT: LOT, YARD: YARD, ZONE: ZONE, CRANE: CRANE, CLAW: CLAW, CONTACT: CONTACT, TRIES: TRIES, ROUNDS: ROUNDS,
     clamp: clamp, lerp: lerp, rng: rng, typeById: typeById, topAt: topAt, topAtWorld: topAtWorld,
     clawScale: clawScale, carryCable: carryCable, clawReach: clawReach, fingerZ: fingerZ, fingerDepth: fingerDepth,
-    stallPos: stallPos, makeLot: makeLot, carAt: carAt, neighbors: neighbors, surround: surround, carValue: carValue, gaps: gaps, clawSlack: clawSlack,
+    stallPos: stallPos, makeLot: makeLot, carAt: carAt, neighbors: neighbors, carValue: carValue, gaps: gaps, clawSlack: clawSlack,
     presentCars: presentCars, toLocal: toLocal, toWorld: toWorld, comWorld: comWorld, inFootprint: inFootprint,
     clawProbe: clawProbe, simulateDescent: simulateDescent, gripInfo: gripInfo,
     tiltTarget: tiltTarget, slipOffset: slipOffset, liftSpeed: liftSpeed, swingOmega: swingOmega, swingLeff: swingLeff,

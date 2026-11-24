@@ -239,16 +239,16 @@ const overCom = i => [i.aim.x, i.aim.com[1]];
   await shot(page, '42_overview_oblique');
   await page.evaluate(() => window.__crane.cam(null));
 
-  // ---------------- ROUND 1：囲まれたスポーツカーを選び、真上から下ろして真っ直ぐ引き抜き、GET（無傷・接触なし）
+  // ---------------- ROUND 1：スポーツカーを選び、真上から下ろして真っ直ぐ引き抜き、GET（無傷・接触なし）
   log('[R1 スポーツカー：きれいに]');
-  const L1 = await page.evaluate(() => { const L = window.CraneLogic, i = window.__crane.info(); return i.cars.map(c => ({ id: c.id, type: c.type, stars: c.stars, value: c.value })); });
+  const L1 = await page.evaluate(() => { const L = window.CraneLogic, i = window.__crane.info(); return i.cars.map(c => ({ id: c.id, type: c.type, value: c.value })); });
   const sports = L1.find(c => c.type === 'sports');
   // 自由移動中のハイライト切替：まず隣の車の上 → スポーツカーの上へ。爪の真下の車が切り替わる
   const lotInfo = await page.evaluate(() => { const L = window.CraneLogic, i = window.__crane.info(), lot = L.makeLot(i.seed); return lot.cars.map(c => ({ id: c.id, nb: L.neighbors(lot, c) })).map(o => ({ id: o.id, left: o.nb.left && o.nb.left.id, right: o.nb.right && o.nb.right.id })); });
   const nbOf = lotInfo[sports.id], firstId = nbOf.left != null ? nbOf.left : nbOf.right;
   i = await aimAt(page, firstId);
   const first = L1.find(c => c.id === firstId);
-  check('自由移動：爪の真下の車がライブで狙いになる（値札ハイライト・HUD に価値・囲まれ度・隙間）', i.aimId === firstId && i.hud.name.length > 0 && i.hud.val === '¥' + first.value + '万' && /隙間/.test(i.hud.aim) && /★/.test(i.hud.aim) && !i.actDisabled, JSON.stringify(i.hud));
+  check('自由移動：爪の真下の車がライブで狙いになる（値札ハイライト・HUD に価値・隙間。★と倍率は出さない）', i.aimId === firstId && i.hud.name.length > 0 && i.hud.val === '¥' + first.value + '万' && /隙間/.test(i.hud.aim) && !/[★☆×]/.test(i.hud.aim) && !i.actDisabled, JSON.stringify(i.hud));
   check('自由移動：狙いの車種に合わせて爪の大きさが変わる', i.clawType === first.type, `claw=${i.clawType} car=${first.type}`);
   check('v2.4 狙いを当てた車の値札だけ消える（他は表示）', !i.tagsVisible.aimShown && i.tagsVisible.shown === i.tagsVisible.present - 1 && JSON.stringify(i.tagsVisible.hiddenIds) === JSON.stringify([firstId]), JSON.stringify(i.tagsVisible));
   await shot(page, '02_aim_switch_a');
@@ -274,7 +274,7 @@ const overCom = i => [i.aim.x, i.aim.com[1]];
   // v2.6：ボタンを押さずに自動で掴む
   await waitFor(page, () => ['closed', 'lift', 'carry'].includes(window.__crane.phase), null, 10000);
   i = await info(page);
-  check('R1 掴んだ時点で対象が確定（target=スポーツカー、価値は囲まれ度込み）', i.target && i.target.id === sports.id && i.target.value === sports.value && i.hud.aim === '', `target=${i.target && i.target.id} value=${i.target && i.target.value}`);
+  check('R1 掴んだ時点で対象が確定（target=スポーツカー、価値＝基本価格）', i.target && i.target.id === sports.id && i.target.value === sports.value && i.hud.aim === '', `target=${i.target && i.target.id} value=${i.target && i.target.value}`);
   // v2.6：引き抜きも自動
   await waitFor(page, () => { const i = window.__crane.info(); return window.__crane.phase === 'carry' || (window.__crane.phase === 'lift' && i.load && i.load.bottomY > 0.55); });
   await shot(page, '05_pull');
@@ -295,7 +295,7 @@ const overCom = i => [i.aim.x, i.aim.com[1]];
   check('GET の瞬間に写真を1枚撮った（kind=get）', i.photo && i.photo.kind === 'get' && i.photoCount === 1, JSON.stringify(i.photo && { kind: i.photo.kind, ms: i.photo.ms, prof: i.photo.prof }));
   await sleep(1800); // 写真の「現像」アニメーション
   let pc = await photoCard(page, '06p_get_photo.jpg');
-  check('GET カードにポラロイド写真（640px・中身あり・画面内・キャプション）', /show/.test(pc.cls) && !/fail/.test(pc.cls) && pc.nw === 640 && pc.sd > 15 && pc.inside && /GET!/.test(pc.cap) && /¥720万/.test(pc.cap), JSON.stringify(pc));
+  check('GET カードにポラロイド写真（640px・中身あり・画面内・キャプション）', /show/.test(pc.cls) && !/fail/.test(pc.cls) && pc.nw === 640 && pc.sd > 15 && pc.inside && /GET!/.test(pc.cap) && pc.cap.includes('¥' + i.results[0].value + '万'), JSON.stringify(pc)); // 価値は囲まれ度の廃止（2026-11-24）で基本価格どおり
   await shot(page, '06b_get_card');
   await page.click('#cBtn');
 

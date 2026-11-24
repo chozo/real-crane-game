@@ -107,7 +107,7 @@ function ogpHtml(sceneUrl, iconSvg) {
     <h1><span class="b">現実版</span><span class="a">クレーンゲーム</span></h1>
     <div class="ribbon">駐車場編</div>
   </div>
-  <div class="catch">本物の車を、釣り上げろ！<br><em>囲まれた車ほど高い。</em>ぶつけたら弁償。</div>
+  <div class="catch">本物の車を、釣り上げろ！<br><em>高い車を狙え。</em>ぶつけたら弁償。</div>
   <div class="url">game.chozo.net/real-crane-game</div>
   <div class="pop">GET<b>!?</b></div>
   </body></html>`;

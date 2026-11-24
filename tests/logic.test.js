@@ -23,7 +23,10 @@ test('車種：6種類（軽・コンパクト・セダン・ワゴン・オー�
   // オープンカーは屋根が無い（掴む面はドアの上）
   assert.equal(L.topAt(T('open'), 0), T('open').lowTop);
   assert.equal(L.topAt(T('sedan'), T('sedan').cabX * T('sedan').L), T('sedan').H);
-  for (const p of L.CAR_TYPES) assert.ok(p.colors.length >= 3, p.name + ' colors');
+  for (const p of L.CAR_TYPES) assert.ok(p.colors.length >= 2, p.name + ' colors');
+  // ユーザー指定の色（2026-11-24）：スポーツカーは赤か黄色、オープンカーは青か白
+  assert.deepStrictEqual(L.typeById('sports').colors, [0xe02818, 0xf2c200]);
+  assert.deepStrictEqual(L.typeById('open').colors, [0x2f6fd8, 0xf4f4f0]);
   // 高級車ほど傷の減額が大きい
   assert.ok(T('sports').scratchK > T('sedan').scratchK && T('sedan').scratchK >= T('kei').scratchK);
 });
@@ -46,23 +49,15 @@ test('駐車場：2列×6区画、10台＋空き2、決定的、重なりなし�
   }
 });
 
-test('囲まれ度と価値：挟まれた車・奥の列ほど高い。隣の車がいなくなると下がる', () => {
+test('価値＝基本価格（囲まれ度は 2026-11-24 に廃止）：隣の車の有無・列で変わらない', () => {
+  assert.equal(L.surround, undefined, '囲まれ度の計算は無い');
   const lot = L.makeLot(1);
-  for (const c of lot.cars) {
-    const s = L.surround(lot, c), n = L.neighbors(lot, c);
-    assert.equal(s.side, (n.left ? 1 : 0) + (n.right ? 1 : 0));
-    assert.equal(s.across, n.across ? 1 : 0);
-    assert.equal(s.back, c.row === 0 ? 1 : 0);
-    assert.ok(near(s.mult, 1 + 0.3 * s.side + 0.2 * s.across + 0.15 * s.back, 1e-9));
-    assert.equal(L.carValue(lot, c), Math.round(c.type.base * s.mult));
-  }
-  // 最大は 2 台に挟まれ・背中合わせあり・奥の列 → ×1.95
-  assert.ok(near(1 + 0.6 + 0.2 + 0.15, 1.95));
-  // 同じ車種なら、囲まれている方が高い
+  for (const c of lot.cars) assert.equal(L.carValue(lot, c), c.type.base, c.type.id);
+  // 隣の車がいなくなっても価値は変わらない（隙間は空きになる）
   const c = sandwiched(lot), before = L.carValue(lot, c);
   const nb = L.neighbors(lot, c);
   nb.left.present = false;
-  assert.ok(L.carValue(lot, c) < before, 'value drops when a neighbour leaves');
+  assert.equal(L.carValue(lot, c), before, 'value unchanged when a neighbour leaves');
   assert.equal(L.gaps(lot, c).left, null, 'gap becomes open');
 });
 
