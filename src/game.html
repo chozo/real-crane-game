@@ -42,6 +42,7 @@
   #hPrize .name { font-size:calc(var(--u)*5.4); font-weight:900; text-shadow:0 2px 0 #000, 0 0 10px rgba(0,0,0,.7); white-space:nowrap; }
   #hPrize .val { font-size:calc(var(--u)*4); font-weight:800; color:var(--ink); background:var(--yel); border-radius:99px; padding:calc(var(--u)*.5) calc(var(--u)*2.2); white-space:nowrap; }
   #hTries { margin-left:auto; font-size:calc(var(--u)*3.8); font-weight:800; white-space:nowrap; text-shadow:0 2px 4px #000; }
+  #hTries .x { color:#ff5a3c; } #hTries .o { opacity:.5; }
   #hCond { margin-top:calc(var(--u)*1); font-size:calc(var(--u)*3.7); font-weight:800; text-shadow:0 2px 4px #000; min-height:1.3em; white-space:nowrap; }
   #hCond .bad { color:#ffb02e; }
 
@@ -121,7 +122,7 @@
   #pCap small { font-size:calc(var(--u)*3.1); font-weight:700; color:#7a7262; white-space:nowrap; margin-top:calc(var(--u)*.4); }
   #photo.fail #pCap b { color:#b3261a; }
 
-  /* カード（ラウンド結果・タイトル・最終結果） */
+  /* カード（1台ごとの結果・タイトル・最終結果） */
   .sheet { background:rgba(255,250,236,.97); color:var(--ink); border-radius:calc(var(--u)*4); padding:calc(var(--u)*4) calc(var(--u)*4.4); box-shadow:0 12px 30px rgba(0,0,0,.5); }
   #card { bottom:3%; padding:0 4%; }
   #card .sheet { text-align:center; }
@@ -136,6 +137,7 @@
   #cWhy { font-size:calc(var(--u)*3.7); font-weight:700; line-height:1.45; margin:calc(var(--u)*1.6) 0 calc(var(--u)*2); }
   #cScore { font-size:calc(var(--u)*4.1); font-weight:800; line-height:1.45; }
   #cScore b { font-size:calc(var(--u)*9.5); color:var(--red); font-variant-numeric:tabular-nums; }
+  #cScore .st { font-size:calc(var(--u)*3.6); color:#6b6455; margin-top:calc(var(--u)*.4); }
   .big { border:none; border-radius:999px; padding:calc(var(--u)*3) calc(var(--u)*10); font-size:calc(var(--u)*6.4); line-height:1.15; white-space:nowrap; font-weight:900;
     color:#fff; background:linear-gradient(#ff7a5c,#d8321b); box-shadow:0 calc(var(--u)*1.4) 0 #7d1607, 0 calc(var(--u)*2.4) calc(var(--u)*4) rgba(0,0,0,.4); letter-spacing:.06em; margin-top:calc(var(--u)*3); }
   .big:active { transform:translateY(calc(var(--u)*1)); box-shadow:0 calc(var(--u)*.4) 0 #7d1607; }
@@ -152,7 +154,9 @@
 
   #result { top:0; bottom:0; background:rgba(10,16,24,.55); }
   #result .sheet { position:absolute; left:5%; right:5%; top:9%; text-align:center; }
-  #rHead { font-size:calc(var(--u)*5); font-weight:900; letter-spacing:.2em; color:#8a6a10; }
+  #rHead { font-size:calc(var(--u)*9); font-weight:900; letter-spacing:.08em; color:#8a6a10; line-height:1.1; }
+  #rHead.perfect { color:#d49a00; } #rHead.clear { color:#2f8a3c; } #rHead.over { color:#c0301c; }
+  #rSub { font-size:calc(var(--u)*4); font-weight:800; color:#6b6455; margin-top:calc(var(--u)*.6); }
   #rTotal { font-size:calc(var(--u)*15); font-weight:900; color:var(--red); line-height:1.1; font-variant-numeric:tabular-nums; white-space:nowrap; }
   #rTotal small { font-size:calc(var(--u)*5); color:var(--ink); margin-left:.2em; }
   #rRank { font-size:calc(var(--u)*6); font-weight:900; margin:calc(var(--u)*1) 0 calc(var(--u)*3); }
@@ -161,6 +165,7 @@
   #rList td:first-child { text-align:left; } #rList td:last-child { text-align:right; font-variant-numeric:tabular-nums; font-weight:900; }
   #rList .st { font-size:calc(var(--u)*3.3); color:#6b6455; }
   #rList .neg { color:#c0301c; }
+  #rList.dense { font-size:calc(var(--u)*3.4); } #rList.dense td { padding:calc(var(--u)*.6) calc(var(--u)*.8); }
 </style>
 </head>
 <body>
@@ -170,7 +175,7 @@
     <div id="flash"></div>
     <div id="boom"></div>
     <div id="hud" class="panel">
-      <div class="hrow"><div class="chip">ROUND <b id="hRound">1</b>/5</div><div class="chip">合計 <b id="hScore">0</b>万</div></div>
+      <div class="hrow"><div class="chip">残り <b id="hLeft">10</b>台</div><div class="chip">合計 <b id="hScore">0</b>万</div></div>
       <div id="hPrize"><span class="name" id="hName"></span><span class="val" id="hVal"></span><span id="hTries"></span></div>
       <div id="hAimWrap"><div id="hAim"></div></div>
       <div id="hCond"></div>
@@ -210,7 +215,7 @@
       <div class="logo"><small>REAL SIZE</small><h1>現実版<br>クレーン<br>ゲーム<br><em>駐車場編</em></h1>
         <p><span class="nw">びっしり停まった駐車場から、</span><br><span class="nw">好きな1台を巨大クレーンで釣り上げろ。</span></p></div>
       <div class="foot">
-        <div class="how"><span class="nw">高い車を狙え。</span><span class="nw">でも隣にぶつけたら弁償。</span></div>
+        <div class="how"><span class="nw">全部取ればクリア！</span><span class="nw">3回失敗でゲームオーバー。</span><br><span class="nw">高い車を狙え。</span><span class="nw">でも隣にぶつけたら弁償。</span></div>
         <button class="big" id="startBtn">スタート</button>
       </div>
     </div>
@@ -218,6 +223,7 @@
     <div id="result" class="panel">
       <div class="sheet">
         <div id="rHead">RESULT</div>
+        <div id="rSub"></div>
         <div id="rTotal">0<small>万円</small></div>
         <div id="rRank"></div>
         <table id="rList"></table>
@@ -241,7 +247,8 @@ var L = window.CraneLogic, T = THREE, DEG = L.DEG;
 var $ = function (id) { return document.getElementById(id); };
 var app = $('app'), canvas = $('stage');
 var Q = new URLSearchParams(location.search);
-var START_ROUND = L.clamp(parseInt(Q.get('round') || '1', 10) - 1 || 0, 0, 4);
+// 確認用：?left=N 車を N 台だけにして始める／?fails=N 失敗 N 回の状態から始める（2026-11-24 にラウンド制を廃止し ?round を置き換え）
+var LEFT = L.clamp(parseInt(Q.get('left') || '0', 10) || 0, 0, 10), START_FAILS = L.clamp(parseInt(Q.get('fails') || '0', 10) || 0, 0, L.MAX_FAILS - 1);
 var SEED = parseInt(Q.get('seed') || '0', 10) || (Math.floor(Math.random() * 1e6) + 1);
 var VOFF = 0.13; // 下の操作パネルの分、注視点を画面の上寄りに描く
 
@@ -1321,7 +1328,7 @@ var lot = L.makeLot(SEED), models = {};
 var state = {
   phase: 'title', round: 0, aimId: null, aim: null, clawType: null, car: null, rd: null, lift: null,
   crane: L.makeCrane(0, 0.5), swing: L.makeSwing(), cable: L.CRANE.cableMin + 2,
-  tries: L.TRIES, results: [], closeT: 0, timer: 0, gripped: false, stopKind: null, descentHits: {},
+  fails: 0, results: [], closeT: 0, timer: 0, gripped: false, stopKind: null, descentHits: {},
   fall: null, shake: 0, lastResult: null, input: { x: 0, z: 0 }, msgKey: '', landPos: null, refTotal: L.maxTotal(lot), hold: null
 };
 var pivotYaw = new T.Group(), pivotTilt = new T.Group(); pivotYaw.add(pivotTilt); Claw.group.add(pivotYaw);
@@ -1346,20 +1353,23 @@ function tagShow(car, on) { var m = car && models[car.id]; if (m && m.tag) m.tag
 
 function newGame() {
   state.results.forEach(function (r) { if (r.photo && r.photo.url) URL.revokeObjectURL(r.photo.url); });
-  lot = L.makeLot(SEED); state.refTotal = L.maxTotal(lot); state.results = [];
+  lot = L.makeLot(SEED);
+  if (LEFT > 0) { var nk = 0; lot.cars.forEach(function (c) { if (c.present && ++nk > LEFT) c.present = false; }); }
+  state.refTotal = L.maxTotal(lot); state.results = []; state.fails = START_FAILS;
   fx.forEach(function (f) { f.o.removeFromParent(); }); fx.length = 0;
   clearWrecks();
   buildLotModels();
 }
-function startRound(i) {
-  // 前のラウンドで取った車・落とした車を片付ける
+// 2026-11-24：ラウンド制は廃止。1台ごとの挑戦（ターン）を、車が無くなるか3回失敗するまで続ける
+function startTurn() {
+  // 前のターンで取った車・落とした車を片付ける
   // 大破した車の残骸（黒焦げ）はその場に残す（v2.2）
   lot.cars.forEach(function (c) { if (!c.present && !(models[c.id] && models[c.id].wreck)) removeCarModel(c); });
-  state.round = i; state.car = null; state.aim = null; state.aimId = null; state.clawType = null; state.lift = null; state.load = null;
+  state.car = null; state.aim = null; state.aimId = null; state.clawType = null; state.lift = null; state.load = null;
   state.rd = { car: null, value: 0, repairs: 0, log: [] };
   state.crane = L.makeCrane(0, 0.6); state.swing = L.makeSwing(); state.cable = L.carryCable(DEFAULT_TYPE); // 通路の上から（駐車場のすぐ手前）
   Claw.configure(null); Claw.setClose(0); state.closeT = 0;
-  state.tries = L.TRIES; state.gripped = false; state.fall = null; state.lastResult = null; state.landPos = null; state.photo = null; state.wreck = null;
+  state.gripped = false; state.fall = null; state.lastResult = null; state.landPos = null; state.photo = null; state.wreck = null;
   $('photo').className = '';
   selFrame.visible = false; clearGapMarks();
   refreshTags();
@@ -1367,7 +1377,8 @@ function startRound(i) {
   show('card', false); show('result', false); show('title', false); show('hud', true); show('ctl', true); show('gauges', false);
   setPhase('move');
   $('big').className = '';
-  banner('ROUND ' + (i + 1), '狙う車の真上へ', '爪の真下の車が狙い。掴んだら決定', 2.2);
+  if (!state.results.length) banner('START', '狙う車の真上へ', '全部取ればクリア・3回失敗で終了', 2.4);
+  else banner('あと ' + L.presentCars(lot).length + '台', '次の車を狙え', '失敗 ' + state.fails + '/' + L.MAX_FAILS, 1.6);
   updateHud();
 }
 function setPhase(ph) { state.phase = ph; state.timer = 0; updateAction(); }
@@ -1413,12 +1424,15 @@ function pop(text, sub, yFrac, hard) {
 function totalScore() { return state.results.reduce(function (a, r) { return a + r.score; }, 0); }
 function gapClass(g, sl) { return g == null ? 'wide' : sl < 0.15 ? 'tight' : sl < 0.3 ? 'mid' : 'wide'; }
 function updateHud() {
-  $('hRound').textContent = state.round + 1;
+  $('hLeft').textContent = L.presentCars(lot).length;
   $('hScore').textContent = totalScore();
   var car = state.car, rd = state.rd, aimBox = $('hAim');
-  var t = ''; for (var i = 0; i < L.TRIES; i++) t += i < state.tries ? '●' : '○';
-  $('hTries').textContent = rd ? 'のこり ' + t : '';
+  // 失敗の数（ゲーム全体で3回まで）：✕＝失敗、○＝まだ
+  var ht = $('hTries'); ht.innerHTML = ''; ht.appendChild(document.createTextNode('失敗 '));
+  var hx = document.createElement('span'); hx.className = 'x'; hx.textContent = '✕'.repeat(state.fails); ht.appendChild(hx);
+  var ho = document.createElement('span'); ho.className = 'o'; ho.textContent = '○'.repeat(Math.max(0, L.MAX_FAILS - state.fails)); ht.appendChild(ho);
   var c = $('hCond'); c.innerHTML = '';
+  if (state.lastResult && state.lastResult.kind === 'miss') { $('hAimWrap').style.display = 'none'; return; } // 3回目の失敗で決着：狙いの情報は出さない（大きな「取れず…」と重ねない）
   if (!car) {
     // 掴む前：爪の真下の車（狙い）の価値・左右の隙間をライブで
     var a = state.aim; aimBox.innerHTML = ''; $('hAimWrap').style.display = '';
@@ -1482,9 +1496,9 @@ window.addEventListener('keyup', function (e) { if (KEYS[e.key]) { held[KEYS[e.k
 $('act').addEventListener('pointerdown', function (e) { e.preventDefault(); Sfx.init(); $('act').classList.add('on'); action(); });
 ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) { $('act').addEventListener(ev, function () { $('act').classList.remove('on'); }); });
 $('startBtn').addEventListener('click', function () { startGame(); });
-$('cBtn').addEventListener('click', function () { Sfx.init(); Sfx.click(); nextRound(); });
-$('againBtn').addEventListener('click', function () { Sfx.init(); Sfx.click(); newGame(); startRound(0); });
-function startGame() { Sfx.init(); Sfx.click(); newGame(); startRound(START_ROUND); }
+$('cBtn').addEventListener('click', function () { Sfx.init(); Sfx.click(); nextTurn(); });
+$('againBtn').addEventListener('click', function () { Sfx.init(); Sfx.click(); newGame(); startTurn(); });
+function startGame() { Sfx.init(); Sfx.click(); newGame(); startTurn(); }
 
 function action() {
   var ph = state.phase, p = curP();
@@ -1495,7 +1509,7 @@ function action() {
     state.descentHits = {}; state.stopKind = null; state.gripped = false;
     setPhase('lower');
   } else if (ph === 'lower') {
-    // 下降の中止：車（または地面）に届くまでは巻き上げ直せる。従来の「やり直す」と同じく空の爪を戻す（1回分を使う）
+    // 下降の中止：車（または地面）に届くまでは巻き上げ直せる。自分で中止したときは失敗に数えない（2026-11-24）
     Sfx.beep();
     state.stopKind = 'abort'; state.gripped = false;
     setPhase('liftEmpty');
@@ -1645,14 +1659,23 @@ function update(dt) {
   } else if (ph === 'liftEmpty') {
     state.cable = Math.max(L.carryCable(p), state.cable - 3.2 * dt); hoisting = 1;
     setMsg('liftEmpty' + (state.stopKind === 'abort' ? 'A' : ''), state.stopKind === 'abort' ? '下降を中止。爪を戻しています…' : '掴めなかった…爪を戻しています');
-    if (state.cable <= L.carryCable(p) + 1e-6) { setPhase('miss'); Sfx.fail(); }
+    if (state.cable <= L.carryCable(p) + 1e-6) { setPhase('miss'); if (state.stopKind !== 'abort') Sfx.fail(); }
   } else if (ph === 'release') {
     setMsg('release', '回収ゾーンに置いた！');
     state.closeT = Math.max(0, state.closeT - dt / 0.6); Claw.setClose(state.closeT);
     if (state.closeT <= 0) state.cable = Math.max(L.carryCable(p), state.cable - 6 * dt);
-    if (state.timer > 1.4) roundEnd('get');
+    if (state.timer > 1.4) turnEnd('get');
   } else if (ph === 'miss') {
-    if (state.timer > 0.4) { state.tries--; updateHud(); if (state.tries > 0) { setPhase('move'); pop('掴めなかった', 'あと' + state.tries + '回', 0.38); } else roundEnd('miss'); }
+    if (state.timer > 0.4) {
+      if (state.stopKind === 'abort') { setPhase('move'); pop('下降を中止', '失敗には数えない', 0.38); }
+      else {
+        // 掴めなかった＝失敗1回。3回目ならゲームオーバー（カードを出す）、それまではその場で続行
+        state.fails++;
+        if (state.fails >= L.MAX_FAILS) turnEnd('miss');
+        else { state.results.push(makeResult('miss')); state.rd = { car: null, value: 0, repairs: 0, log: [] }; setPhase('move'); pop('掴めなかった', '失敗 ' + state.fails + '/' + L.MAX_FAILS, 0.38, true); }
+      }
+      updateHud();
+    }
   } else if (ph === 'fallen' || ph === 'card' || ph === 'missed') {
     stepFall(dt);
   } else if (ph === 'fall') {
@@ -1660,7 +1683,7 @@ function update(dt) {
     stepFall(dt);
     state.cable = Math.max(L.carryCable(p), state.cable - 3 * dt);
     if (state.timer > 0.4) { state.closeT = Math.max(0, state.closeT - dt / 0.5); Claw.setClose(state.closeT); }
-    if (state.timer > 3.0 && state.lastResult == null) roundEnd('fall');
+    if (state.timer > 3.0 && state.lastResult == null) turnEnd('fall');
   }
   Sfx.setLoop(Sfx.motor || {}, moving ? 0.07 + 0.05 * Math.hypot(cr.vx, cr.vz) / 4 : 0, 0.8 + 0.5 * Math.hypot(cr.vx, cr.vz) / 4);
   Sfx.setLoop(Sfx.hoist || {}, hoisting * 0.06, ph === 'lift' ? 0.85 : 1.15);
@@ -1743,11 +1766,16 @@ function stepFall(dt) {
   }
 }
 
-function roundEnd(kind) {
-  var car = state.car, rd = state.rd, lf = state.lift, res, who = car || state.aim;
+function makeResult(kind) {
+  var car = state.car, rd = state.rd, lf = state.lift, who = car || state.aim;
   var cond = kind === 'get' ? lf.load.condition : 0;
-  res = { kind: kind, name: who ? who.type.name : '—', value: rd.value, condition: cond, repairs: rd.repairs, score: L.score(kind === 'get' ? rd.value : 0, cond, rd.repairs),
+  return { kind: kind, name: who ? who.type.name : '—', value: rd.value, condition: cond, repairs: rd.repairs, score: L.score(kind === 'get' ? rd.value : 0, cond, rd.repairs),
     cause: lf && lf.load && lf.load.cause, contacts: rd.log.map(function (e) { return e.source + ':' + e.kind; }) };
+}
+function gameOutcome() { return L.outcome(state.fails, L.presentCars(lot).length); }
+function turnEnd(kind) {
+  var car = state.car, res = makeResult(kind);
+  if (kind === 'fall') state.fails++; // 落とした＝失敗1回（掴めなかった分は miss の時点で数える）
   if ((kind === 'get' || kind === 'fall') && car) car.present = false; // 取った車・落とした車は駐車場から消える
   if (kind === 'get') {
     // GET の写真：回収ゾーンに収まった車を、紙吹雪の前に撮る
@@ -1790,21 +1818,32 @@ function showCard(res) {
   var l1 = document.createElement('div'); l1.textContent = line; cs.appendChild(l1);
   var l2 = document.createElement('div'); l2.appendChild(document.createTextNode('＝ '));
   var b = document.createElement('b'); b.textContent = res.score; l2.appendChild(b); l2.appendChild(document.createTextNode(' 万円')); cs.appendChild(l2);
-  $('cBtn').textContent = state.results.length >= L.ROUNDS - START_ROUND ? '結果を見る' : '次のラウンドへ';
+  // 失敗の数と残りの台数（決着がついたら「結果を見る」）
+  var oc = gameOutcome(), left = L.presentCars(lot).length, l3 = document.createElement('div'); l3.className = 'st';
+  if (oc === 'over') l3.textContent = '失敗 ' + state.fails + '/' + L.MAX_FAILS + '　ゲームオーバー';
+  else if (oc) l3.textContent = '駐車場の車をすべて回収！';
+  else l3.textContent = 'あと ' + left + '台' + (res.kind === 'get' ? '' : '　失敗 ' + state.fails + '/' + L.MAX_FAILS + '（あと' + (L.MAX_FAILS - state.fails) + '回でゲームオーバー）');
+  cs.appendChild(l3);
+  $('cBtn').textContent = oc ? '結果を見る' : '続ける';
   show('card', true); show('gauges', false); show('ctl', false);
   state.phase = 'card';
 }
-function nextRound() {
+function nextTurn() {
   show('card', false); $('big').className = '';
-  if (state.results.length >= L.ROUNDS - START_ROUND || L.presentCars(lot).length === 0) return showResult();
-  startRound(state.round + 1);
+  if (gameOutcome()) return showResult();
+  startTurn();
 }
 function showResult() {
   state.phase = 'result';
   var total = totalScore();
   $('rTotal').innerHTML = ''; $('rTotal').appendChild(document.createTextNode('¥' + total)); var sm = document.createElement('small'); sm.textContent = '万円'; $('rTotal').appendChild(sm);
   $('rRank').textContent = L.rank(total, state.refTotal);
-  var tb = $('rList'); tb.innerHTML = '';
+  var oc = gameOutcome() || 'over', nGet = state.results.filter(function (r) { return r.kind === 'get'; }).length;
+  $('rHead').textContent = oc === 'perfect' ? 'PERFECT!' : oc === 'clear' ? 'CLEAR!' : 'GAME OVER'; $('rHead').className = oc;
+  var rs = $('rSub'); rs.innerHTML = '';
+  if (oc === 'perfect') { var rp = document.createElement('span'); rp.className = 'nw'; rp.textContent = '1回も失敗せずに全部回収！'; rs.appendChild(rp); rs.appendChild(document.createElement('br')); }
+  var rn = document.createElement('span'); rn.className = 'nw'; rn.textContent = nGet + '台 GET・失敗 ' + state.fails + '回'; rs.appendChild(rn);
+  var tb = $('rList'); tb.innerHTML = ''; tb.className = state.results.length > 7 ? 'dense' : '';
   state.results.forEach(function (r) {
     var tr = document.createElement('tr');
     var a = document.createElement('td'); a.textContent = r.name;
@@ -1859,7 +1898,7 @@ function sync(dt) {
   var aimOn = state.phase === 'move' || state.phase === 'lower';
   laser.visible = aim.visible = aimOn; tipMarks.forEach(function (m) { m.visible = aimOn; });
   var aimCar = state.aim;
-  // v2.6 修正：以前は curP()（狙い or 一度狙った車種）が無いと丸ごと飛ばしていたため、ラウンド開始から最初に車の上へ来るまで
+  // v2.6 修正：以前は curP()（狙い or 一度狙った車種）が無いと丸ごと飛ばしていたため、ターン開始から最初に車の上へ来るまで
   // 印が初期表示の場所に置き去りだった。印・レーザー・指先は爪の真下へ毎フレーム必ず置く（車種が未定なら既定の爪の寸法）
   if (aimOn) {
     var p = curP(), topY = end.y - L.CRANE.clawH(p), mp = L.markerPos(cr, state.cable, state.swing);
@@ -1945,7 +1984,7 @@ window.__crane = {
     var lf = state.lift, ld = lf && lf.load, cr = state.crane, car = state.car, e = L.clawEnd(cr, state.cable, state.swing);
     return {
       render: { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, texs: renderer.info.memory.textures, frameAvg: frameAvg }, carMeshes: (function () { var n = 0; for (var id in models) models[id].body.traverse(function (o) { if (o.isMesh) n++; }); return n; })(),
-      round: state.round, seed: SEED, tries: state.tries, audio: Sfx.ctx ? Sfx.ctx.state : null, selId: state.aimId, aimId: state.aimId,
+      seed: SEED, fails: state.fails, left: L.presentCars(lot).length, outcome: gameOutcome(), audio: Sfx.ctx ? Sfx.ctx.state : null, selId: state.aimId, aimId: state.aimId,
       aim: state.aim && (function (a) { var g = L.gaps(lot, a); return { id: a.id, type: a.type.id, x: a.x, z: a.z, com: L.comWorld(a), value: L.carValue(lot, a), gaps: g }; })(state.aim),
       hud: { name: $('hName').textContent, val: $('hVal').style.display === 'none' ? '' : $('hVal').textContent, aim: $('hAimWrap').style.display === 'none' ? '' : $('hAim').textContent },
       crane: { x: cr.x, z: cr.z, vx: cr.vx, vz: cr.vz }, cable: state.cable, claw: { x: e.x, y: e.y, z: e.z }, gripped: state.gripped, stopKind: state.stopKind,

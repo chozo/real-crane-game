@@ -149,7 +149,7 @@ async function sheet(browser, files, labels, out, cols) {
     window.__clicks = 0; document.getElementById('act').addEventListener('pointerdown', () => window.__clicks++);
     window.__ph = []; const f = () => { const p = window.__crane.phase, b = document.getElementById('act'); window.__ph.push([p, b.disabled, b.textContent]); if (p !== 'carry' && p !== 'fall') requestAnimationFrame(f); }; requestAnimationFrame(f);
   });
-  const triesB = i.tries;
+  const failsB = i.fails;
   await act(page); // ← この1回だけ
   const steps = [
     ['B1_lower', () => window.__crane.phase === 'lower' && window.__crane.info().cable > 9.5, '下降中'],
@@ -175,7 +175,7 @@ async function sheet(browser, files, labels, out, cols) {
   check('フェーズ：下降→届く→掴む→掴んだ→引き抜き→運搬（ボタン無しで進む）', JSON.stringify(seq.slice(seq.indexOf('lower'))) === JSON.stringify(['lower', 'down', 'closing', 'closed', 'lift', 'carry']), seq.join('→'));
   check('届いた後〜引き抜き中はボタンが押せない（自動）', ph.filter(x => ['down', 'closing', 'closed', 'lift'].includes(x[0])).every(x => x[1]), [...new Set(ph.filter(x => ['down', 'closing', 'closed', 'lift'].includes(x[0])).map(x => x[0] + ':' + x[2]))].join(' '));
   check('下降中は「上げる（中止）」が押せる', ph.filter(x => x[0] === 'lower').every(x => !x[1] && /上げる/.test(x[2])));
-  check('運搬の高さで掴んだまま（対象確定・試行回数はそのまま）', i.phase === 'carry' && i.target && i.target.id === L1.id && !i.load.detached && i.tries === triesB, `target=${i.target && i.target.id} tries=${i.tries}`);
+  check('運搬の高さで掴んだまま（対象確定・失敗の数はそのまま）', i.phase === 'carry' && i.target && i.target.id === L1.id && !i.load.detached && i.fails === failsB, `target=${i.target && i.target.id} fails=${i.fails}`);
   check('運搬中の「置く」は従来どおりボタン（ゾーン外では押せない）', i.actDisabled && /運ぶ/.test(i.actLabel), i.actLabel);
   await sheet(browser, bFiles, bLabels, path.join(OUT, 'B_auto_grip_sheet.png'), 3);
 
@@ -185,7 +185,7 @@ async function sheet(browser, files, labels, out, cols) {
   await press(page, 'bU', true); await waitFor(page, () => window.__crane.info().aimId != null, null, 10000); await press(page, 'bU', false);
   await waitFor(page, () => { const c = window.__crane.info().crane; return !c.vx && !c.vz; });
   await waitFor(page, () => window.__crane.info().aimId != null);
-  i = await info(page); const triesC = i.tries;
+  i = await info(page); const failsC = i.fails;
   await act(page);
   // ヘッドレスは描画が遅く、クリックが届く前に車に届いてしまうので、下降中に止めてから押す（ボタンの処理は止めていても動く）
   await pauseWhen(page, () => window.__crane.phase === 'lower' && window.__crane.info().cable > 9.0);
@@ -193,14 +193,14 @@ async function sheet(browser, files, labels, out, cols) {
   check('下降中のボタンは「上げる」', i.phase === 'lower' && !i.actDisabled && /上げる/.test(i.actLabel), i.phase + ' ' + i.actLabel);
   await act(page);
   await resume(page);
-  await pauseWhen(page, () => window.__crane.phase === 'liftEmpty' && window.__crane.info().cable < 8.6);
+  await pauseWhen(page, () => window.__crane.phase === 'liftEmpty'); // 以前は cable < 8.6 も待っていたが、運搬の高さ（carryCable）は車種で違い 8.6m より長い車だと永久に待っていた
   i = await info(page);
   const cFile = await shot(page, 'C1_abort_rising');
   check('押すと下降を中止して巻き上げる（車に触れずに）', i.phase === 'liftEmpty' && i.stopKind === 'abort' && i.contacts.length === 0, `phase=${i.phase} stop=${i.stopKind}`);
   await resume(page);
   await waitFor(page, () => window.__crane.phase === 'move', null, 20000);
   i = await info(page);
-  check('戻ったら再び移動できる（試行回数は従来の「やり直す」と同じく1減る）', i.phase === 'move' && i.tries === triesC - 1, `tries ${triesC}→${i.tries}`);
+  check('戻ったら再び移動できる（自分で中止したときは失敗に数えない：2026-11-24）', i.phase === 'move' && i.fails === failsC && i.results.length === 0, `fails ${failsC}→${i.fails}`);
 
   await browser.close();
   check('JS エラー 0', errors.length === 0, errors.join(' | '));

@@ -127,12 +127,12 @@ async function hold(page, ids, ms) {
 // 本物のマウスでアクションボタンを押す
 async function act(page) { const b = await page.locator('#act').boundingBox(); await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2); }
 
-// v2.1：選択フェーズは無い。ラウンド開始直後から爪を動かせることを確かめ、車の真上へ運ぶと狙いになる
+// v2.1：選択フェーズは無い。ターン開始直後から爪を動かせることを確かめ、車の真上へ運ぶと狙いになる
 async function roundStart(page) {
   await waitFor(page, () => window.__crane.phase === 'move');
   await sleep(2400); // バナーが消えるのを待つ
   const i = await info(page);
-  check(`R${i.round + 1} 開始直後から操作できる（phase=move・十字パッド表示）・値札は全車に常時表示 (${i.tagsVisible.shown}/${i.tagsVisible.present})`,
+  check(`残り${i.left}台・失敗${i.fails}回：開始直後から操作できる（phase=move・十字パッド表示）・値札は全車に常時表示 (${i.tagsVisible.shown}/${i.tagsVisible.present})`,
     i.phase === 'move' && i.tagsVisible.shown === i.tagsVisible.present && i.tagsVisible.present > 0 && await page.locator('#ctl').isVisible());
 }
 async function aimAt(page, id) {
@@ -211,6 +211,28 @@ async function photoCard(page, file) {
 }
 // 重心の真上（幅方向は車の中心）
 const overCom = i => [i.aim.x, i.aim.com[1]];
+// 爪の指先が隣の車に深く入って乗り上げる（＝掴めない失敗になる）狙いの位置を logic の下降の模擬で探す
+async function findBumpSpot(page) {
+  return page.evaluate(() => {
+    const L = window.CraneLogic, i = window.__crane.info(), lot = L.makeLot(i.seed);
+    lot.cars.forEach(c => { const g = i.cars[c.id]; c.present = g.present; c.damage = g.damage; });
+    for (const c of lot.cars) {
+      if (!c.present) continue;
+      const nb = L.neighbors(lot, c);
+      for (const [side, sx] of [['left', -1], ['right', 1]]) {
+        if (!nb[side]) continue;
+        // 指先が隣の車に深く入る位置を探す（下降を logic で模擬）
+        const cz = L.comWorld(c)[1];
+        for (let off = 0.2; off < 1.6; off += 0.02) {
+          if (L.carUnder(lot, c.x + sx * (off + 0.04), cz) !== c) break; // 爪の真下が隣の車に変わる手前まで
+          const d = L.simulateDescent(lot, c, c.x + sx * off, cz);
+          if (d.stop === 'neighbor') return { id: c.id, off: sx * off, nb: nb[side].id };
+        }
+      }
+    }
+    return null;
+  });
+}
 
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -297,6 +319,7 @@ const overCom = i => [i.aim.x, i.aim.com[1]];
   let pc = await photoCard(page, '06p_get_photo.jpg');
   check('GET カードにポラロイド写真（640px・中身あり・画面内・キャプション）', /show/.test(pc.cls) && !/fail/.test(pc.cls) && pc.nw === 640 && pc.sd > 15 && pc.inside && /GET!/.test(pc.cap) && pc.cap.includes('¥' + i.results[0].value + '万'), JSON.stringify(pc)); // 価値は囲まれ度の廃止（2026-11-24）で基本価格どおり
   await shot(page, '06b_get_card');
+  check('GET カード：残りの台数と「続ける」ボタン（ラウンド制は無い）', await page.evaluate(() => /あと 9台/.test(document.getElementById('cScore').textContent) && document.getElementById('cBtn').textContent === '続ける'));
   await page.click('#cBtn');
 
   // ---------------- ROUND 2：右にずらして下ろす → 爪が隣の車を「こする」→ 引き抜き中に右へ動かす →「ぶつける」→ 減額して GET
@@ -371,25 +394,7 @@ const overCom = i => [i.aim.x, i.aim.com[1]];
   // ---------------- ROUND 3：1回目は大きくずらして爪が隣の車に乗り上げる（ぶつけた）→ 2回目は前後に大きくずらして傾き滑落
   log('[R3 爪が乗り上げ → 滑落]');
   await roundStart(page);
-  const pick3 = await page.evaluate(() => {
-    const L = window.CraneLogic, i = window.__crane.info(), lot = L.makeLot(i.seed);
-    lot.cars.forEach(c => { const g = i.cars[c.id]; c.present = g.present; c.damage = g.damage; });
-    for (const c of lot.cars) {
-      if (!c.present) continue;
-      const nb = L.neighbors(lot, c);
-      for (const [side, sx] of [['left', -1], ['right', 1]]) {
-        if (!nb[side]) continue;
-        // 指先が隣の車に深く入る位置を探す（下降を logic で模擬）
-        const cz = L.comWorld(c)[1];
-        for (let off = 0.2; off < 1.6; off += 0.02) {
-          if (L.carUnder(lot, c.x + sx * (off + 0.04), cz) !== c) break; // 爪の真下が隣の車に変わる手前まで
-          const d = L.simulateDescent(lot, c, c.x + sx * off, cz);
-          if (d.stop === 'neighbor') return { id: c.id, off: sx * off, nb: nb[side].id };
-        }
-      }
-    }
-    return null;
-  });
+  const pick3 = await findBumpSpot(page);
   check('R3 乗り上げ用の位置が見つかった', !!pick3, JSON.stringify(pick3));
   i = await aimAt(page, pick3.id);
   [tx, tz] = overCom(i);
@@ -404,7 +409,9 @@ const overCom = i => [i.aim.x, i.aim.com[1]];
   check('v2.6 R3 掴めなかった後はボタン不要（押せない・自動で戻す表示）', i.actDisabled && /自動/.test(i.actLabel), i.actLabel);
   await waitFor(page, () => window.__crane.phase === 'move', null, 30000); // ボタンを押さずに待つだけ
   i = await info(page);
-  check('v2.6 R3 ボタン無しで空の爪が戻り、残り回数が1減る（従来どおり）', i.tries === 1, 'tries=' + i.tries);
+  check('R3 掴めなかった＝失敗1回。カードは出さずにその場で続行（ラウンドは無い）', i.fails === 1 && i.phase === 'move' && i.results.length === 3 && i.results[2].kind === 'miss' && i.outcome == null, `fails=${i.fails} results=${i.results.map(r => r.kind)}`);
+  check('R3 乗り上げた弁償は失敗の記録に入る（0 − 弁償）', i.results[2].repairs > 0 && i.results[2].score === -i.results[2].repairs && i.repairs === 0, JSON.stringify(i.results[2]));
+  check('HUD に失敗の数（✕1つ・○2つ）', await page.evaluate(() => document.getElementById('hTries').textContent === '失敗 ✕○○'));
   // 2回目：重心から長手方向に大きくずらす → 傾いて滑り落ちる
   const so = await page.evaluate(() => { const L = window.CraneLogic, i = window.__crane.info(); return L.slipOffset(L.typeById(i.aim.type)); });
   const flip = i.aim.com[1] < i.aim.z ? -1 : 1; // 重心のある側（z）
@@ -428,13 +435,14 @@ const overCom = i => [i.aim.x, i.aim.com[1]];
   await shot(page, '12_fallen');
   await waitFor(page, () => window.__crane.phase === 'card');
   i = await info(page);
-  const r3 = i.results[2];
-  check('R3 落下は 0 − 弁償', r3.kind === 'fall' && r3.score === -r3.repairs && r3.repairs > 0, JSON.stringify(r3));
+  const r3 = i.results[3];
+  check('R3 落下は 0 − 弁償・失敗2回目', r3.kind === 'fall' && r3.score === -r3.repairs && i.fails === 2 && i.outcome == null, JSON.stringify(r3) + ' fails=' + i.fails);
   check('R3 爆発直後に写真を撮った（kind=wreck）', i.photo && i.photo.kind === 'wreck', JSON.stringify(i.photo && { kind: i.photo.kind, len: i.photo.len }));
   await sleep(1800);
   pc = await photoCard(page, '12p_fail_photo.jpg');
   check('R3 失敗カードに写真（fail 額・中身あり・「大破」）', /show/.test(pc.cls) && /fail/.test(pc.cls) && pc.nw === 640 && pc.sd > 10 && pc.inside && /大破/.test(pc.cap), JSON.stringify(pc));
   await shot(page, '12b_fail_photo_card');
+  check('失敗カードに失敗の数と「続ける」', await page.evaluate(() => /失敗 2\/3（あと1回でゲームオーバー）/.test(document.getElementById('cScore').textContent) && document.getElementById('cBtn').textContent === '続ける'), await page.evaluate(() => document.getElementById('cScore').textContent));
   await page.click('#cBtn');
 
   // ---------------- ROUND 4：雑に運ぶ（押しっぱなし→離す）と大きく揺れ、止まっても収まらない → 慎重な運転で揺れを殺して GET
@@ -487,10 +495,26 @@ const overCom = i => [i.aim.x, i.aim.com[1]];
     check(`R${rn} 慎重な運転で揺れを殺してゾーンへ（落とさない）`, cc.done && i.phase === 'carry' && i.inZone && i.swingAmpDeg < 1.6, `amp=${i.swingAmpDeg.toFixed(2)}° ${cc.secs.toFixed(0)}s`);
     await placeAndGet(page, rn === 4 ? '16_get_after_swing' : null);
     i = await info(page);
-    const r = i.results[rn - 1];
+    const r = i.results[i.results.length - 1];
     check(`R${rn} GET（接触なし・着地の衝撃なし）`, r.kind === 'get' && r.repairs === 0 && r.condition === 1, JSON.stringify(r));
     await page.click('#cBtn');
   }
+
+  // ---------------- 3回目の失敗 → ゲームオーバー
+  log('[3回目の失敗でゲームオーバー]');
+  await roundStart(page);
+  const pick6 = await findBumpSpot(page);
+  check('3回目：乗り上げ用の位置が見つかった', !!pick6, JSON.stringify(pick6));
+  i = await aimAt(page, pick6.id);
+  [tx, tz] = overCom(i);
+  await moveClaw(page, tx + pick6.off + Math.sign(pick6.off) * 0.04, tz);
+  await act(page);
+  await waitFor(page, () => window.__crane.phase === 'card', null, 60000);
+  await sleep(400);
+  i = await info(page);
+  check('3回失敗した時点でゲームオーバー（カード「取れず」・「結果を見る」）', i.fails === 3 && i.outcome === 'over' && i.left === 5 && await page.evaluate(() => /取れず/.test(document.getElementById('cTitle').textContent) && /ゲームオーバー/.test(document.getElementById('cScore').textContent) && document.getElementById('cBtn').textContent === '結果を見る'), `fails=${i.fails} outcome=${i.outcome} left=${i.left}`);
+  await shot(page, '13b_gameover_card');
+  await page.click('#cBtn');
 
   // ---------------- 結果
   log('[結果]');
@@ -498,14 +522,44 @@ const overCom = i => [i.aim.x, i.aim.com[1]];
   await sleep(400);
   i = await info(page);
   const sum = i.results.reduce((a, r) => a + r.score, 0);
-  check('結果：5ラウンド分の合計', i.results.length === 5 && i.total === sum, `total=${i.total} ${JSON.stringify(i.results.map(r => r.kind + ':' + r.score))}`);
+  check('結果：全部の挑戦の合計（GET 4・掴めず 2・落下 1）', i.results.length === 7 && i.total === sum && i.results.filter(r => r.kind === 'get').length === 4, `total=${i.total} ${JSON.stringify(i.results.map(r => r.kind + ':' + r.score))}`);
   const shown = await page.evaluate(() => document.getElementById('rTotal').textContent);
   check('結果画面の合計表示が一致', shown.startsWith('¥' + sum), shown);
+  const head = await page.evaluate(() => ({ h: document.getElementById('rHead').textContent, c: document.getElementById('rHead').className, s: document.getElementById('rSub').textContent }));
+  check('結果画面の見出しは GAME OVER（GET 台数と失敗回数つき）', head.h === 'GAME OVER' && head.c === 'over' && /4台 GET・失敗 3回/.test(head.s), JSON.stringify(head));
   await shot(page, '14_result');
   await page.click('#againBtn');
   await waitFor(page, () => window.__crane.phase === 'move');
   i = await info(page);
-  check('もう一度：ラウンド1・駐車場が元に戻る', i.round === 0 && i.results.length === 0 && i.cars.every(c => c.present && c.damage === 0));
+  check('もう一度：失敗0回・10台・駐車場が元に戻る', i.fails === 0 && i.left === 10 && i.results.length === 0 && i.cars.every(c => c.present && c.damage === 0));
+
+  // ---------------- パーフェクト／クリア（確認用 ?left=1：車1台だけの駐車場で、最後の1台を取りきる）
+  for (const [q, want, fails] of [['&left=1', 'PERFECT!', 0], ['&left=1&fails=1', 'CLEAR!', 1]]) {
+    log(`[${want}]`);
+    await page.goto(URL + q);
+    await waitFor(page, () => window.__crane && window.__crane.phase === 'title');
+    await page.click('#startBtn');
+    await roundStart(page);
+    i = await info(page);
+    const only = i.cars.find(c => c.present);
+    check(`${want}：確認用の駐車場は1台・失敗${fails}回から`, i.left === 1 && i.fails === fails && !!only, `left=${i.left} fails=${i.fails}`);
+    i = await aimAt(page, only.id);
+    [tx, tz] = overCom(i);
+    await moveClaw(page, tx, tz);
+    await lowerAndWait(page);
+    await waitFor(page, () => window.__crane.phase === 'carry', null, 60000);
+    await carryToZone(page);
+    await placeAndGet(page, null);
+    await sleep(300);
+    i = await info(page);
+    check(`${want}：最後の1台を取ると決着（カードは「結果を見る」）`, i.left === 0 && i.outcome === (fails ? 'clear' : 'perfect') && await page.evaluate(() => document.getElementById('cBtn').textContent === '結果を見る' && /すべて回収/.test(document.getElementById('cScore').textContent)), `outcome=${i.outcome}`);
+    await page.click('#cBtn');
+    await waitFor(page, () => window.__crane.phase === 'result');
+    await sleep(400);
+    const h = await page.evaluate(() => ({ h: document.getElementById('rHead').textContent, s: document.getElementById('rSub').textContent }));
+    check(`${want}：結果画面の見出し`, h.h === want && new RegExp('1台 GET・失敗 ' + fails + '回').test(h.s), JSON.stringify(h));
+    await shot(page, fails ? '14c_clear' : '14b_perfect');
+  }
 
   // ---------------- 静的チェック
   const html = fs.readFileSync(FILE, 'utf8');

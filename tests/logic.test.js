@@ -298,14 +298,14 @@ test('着地の衝撃とスコア：価値×状態−弁償、ランク', () => 
   assert.equal(L.rank(-50, ref), 'まずは免許から');
 });
 
-test('全5ラウンド：高い車の真上へ爪を動かして掴み、慎重に運べば（押す／離すだけ）、接触ゼロ・落とさずに全部 GET できる（遊べることの確認）', () => {
+test('全車クリア：高い順に真上へ爪を動かして掴み、慎重に運べば（押す／離すだけ）、接触ゼロ・落とさずに10台全部 GET できる＝パーフェクトが可能（遊べることの確認）', () => {
   // v2.1：揺れが強く収まりにくいので、運転手は「目標へ向かいつつ、吊り荷がぶら下がっている側へ寄せて揺れを殺す」運転をする
   // 最後の2つは低いフレームレート（1/12 秒刻み：ヘッドレスの画面確認と同程度）でも運べることの確認
   for (const [seed, dt] of [...SEEDS.map(s => [s, 1 / 60]), [1, 1 / 12], [42, 1 / 12]]) {
     const lot = L.makeLot(seed);
     const zx = (L.ZONE.x0 + L.ZONE.x1) / 2, zz = (L.ZONE.z0 + L.ZONE.z1) / 2;
     let total = 0;
-    for (let round = 0; round < L.ROUNDS; round++) {
+    for (let round = 0; L.presentCars(lot).length > 0; round++) {
       const best = L.presentCars(lot).sort((a, b) => L.carValue(lot, b) - L.carValue(lot, a))[0];
       const [x, z] = overCom(best);
       // 選択フェーズは無い：爪の真下にある車がそのまま狙い（掴んだ時点で確定）
@@ -331,7 +331,8 @@ test('全5ラウンド：高い車の真上へ爪を動かして掴み、慎重�
       total += L.score(value, r.load.condition, r.round.repairs);
       car.present = false; // 取った車は駐車場から消える
     }
-    assert.ok(total > 0.8 * L.maxTotal(L.makeLot(seed)) * 0.7);
+    assert.equal(L.outcome(0, L.presentCars(lot).length), 'perfect');
+    assert.equal(total, L.maxTotal(L.makeLot(seed)), 'all cars, no damage = max total');
   }
 });
 
@@ -657,4 +658,20 @@ test('v2.6 丸い印：位置は常に爪の吊り点の真下（clawEnd の x,z
   }
   assert.ok(onCar > 30 && offCar > 30, `visited both: on ${onCar} / off ${offCar}`);
   assert.ok(maxJump < 0.2, 'no jumps between frames: ' + maxJump.toFixed(3));
+});
+
+// ---------------------------------------------------------------- 2026-11-24：ラウンド制を廃止し、3回失敗でゲームオーバー
+test('決着：3回失敗でゲームオーバー／車が無くなればクリア（失敗0回ならパーフェクト）／それ以外は続行', () => {
+  assert.equal(L.MAX_FAILS, 3);
+  assert.equal(L.ROUNDS, undefined, 'ラウンド制は無い');
+  assert.equal(L.TRIES, undefined, '1台ごとの試行回数は無い');
+  assert.equal(L.outcome(0, 10), null);
+  assert.equal(L.outcome(2, 1), null, '2回失敗でも車が残っていれば続行');
+  assert.equal(L.outcome(3, 5), 'over');
+  assert.equal(L.outcome(3, 0), 'over', '最後の1台で3回目の失敗ならゲームオーバー');
+  assert.equal(L.outcome(0, 0), 'perfect');
+  assert.equal(L.outcome(1, 0), 'clear');
+  assert.equal(L.outcome(2, 0), 'clear');
+  const lot = L.makeLot(1);
+  assert.equal(L.maxTotal(lot), L.presentCars(lot).reduce((a, c) => a + c.type.base, 0), '目安は全車の価値の合計');
 });

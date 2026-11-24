@@ -59,7 +59,8 @@
   LOT.z0 = LOT.rowZ[0] - LOT.SD / 2; LOT.z1 = LOT.rowZ[1] + LOT.SD / 2;
   var YARD = { xMin: -9, xMax: 9, zMin: -12.5, zMax: 7.5 };
   var ZONE = { x0: -4, x1: 4, z0: 1.8, z1: 7.6 };           // 回収ゾーン（手前中央、通路の先）
-  var ROUNDS = 5;
+  // 2026-11-24：ラウンド制を廃止。車が残っている間は何度でも挑戦でき、3回失敗した時点でゲームオーバー
+  var MAX_FAILS = 3;
   var CRANE = {
     topY: 14, cableMin: 3, clear: 2.6,
     accelEmpty: 5, vmaxEmpty: 4,
@@ -77,7 +78,6 @@
   function clawReach(p) { return p.W / 2 + CLAW.openMargin; }  // 爪の中心〜開いた指先の中心（指先の太さ tipR はこの外側）
   function fingerZ(p) { return 0.42 * clawScale(p); }                       // 指の前後位置（±）
   function fingerDepth(p) { return clamp(p.lowTop * 0.75 + 0.15, 0.6, 0.9); } // 開いた指先がハブ下面より下に出る長さ
-  var TRIES = 2;
 
   // ---------------------------------------------------------------- 駐車場の生成
   function stallPos(row, col) { return { x: LOT.x0 + (col + 0.5) * LOT.SW, z: LOT.rowZ[row] }; }
@@ -482,10 +482,16 @@
     if (c >= 0.6) return 'へこみ';
     return '大破';
   }
-  /** 理論上の目安：最初の駐車場で価値の高い5台の合計 */
+  /** 理論上の目安：最初の駐車場の全車の価値の合計（全部を無傷で取ったときのスコア） */
   function maxTotal(lot) {
-    var v = presentCars(lot).map(function (c) { return carValue(lot, c); }).sort(function (a, b) { return b - a; });
-    return v.slice(0, ROUNDS).reduce(function (a, b) { return a + b; }, 0);
+    return presentCars(lot).reduce(function (a, c) { return a + carValue(lot, c); }, 0);
+  }
+  /** ゲームの決着（2026-11-24）：3回失敗＝ゲームオーバー／車が残っていない＝クリア（失敗0回ならパーフェクト）／続行中は null。
+   *  失敗＝掴めなかった・落とした。落とした車は残骸になって取れないので、残りの車が無くなった時点でクリアとする */
+  function outcome(fails, carsLeft) {
+    if (fails >= MAX_FAILS) return 'over';
+    if (carsLeft <= 0) return fails === 0 ? 'perfect' : 'clear';
+    return null;
   }
   function rank(total, ref) {
     var r = Math.max(0, total) / ref;
@@ -665,7 +671,7 @@
   var api = {
     AUTO: AUTO, autoNext: autoNext, manualAction: manualAction, markerPos: markerPos,
     wreckPower: wreckPower, wreckPlan: wreckPlan, photoShot: photoShot, photoFit: photoFit, photoAz: photoAz, PHOTO: PHOTO,
-    G: G, DEG: DEG, CAR_TYPES: CAR_TYPES, LOT: LOT, YARD: YARD, ZONE: ZONE, CRANE: CRANE, CLAW: CLAW, CONTACT: CONTACT, TRIES: TRIES, ROUNDS: ROUNDS,
+    G: G, DEG: DEG, CAR_TYPES: CAR_TYPES, LOT: LOT, YARD: YARD, ZONE: ZONE, CRANE: CRANE, CLAW: CLAW, CONTACT: CONTACT, MAX_FAILS: MAX_FAILS,
     clamp: clamp, lerp: lerp, rng: rng, typeById: typeById, topAt: topAt, topAtWorld: topAtWorld,
     clawScale: clawScale, carryCable: carryCable, clawReach: clawReach, fingerZ: fingerZ, fingerDepth: fingerDepth,
     stallPos: stallPos, makeLot: makeLot, carAt: carAt, neighbors: neighbors, carValue: carValue, gaps: gaps, clawSlack: clawSlack,
@@ -676,7 +682,7 @@
     makeLoad: makeLoad, stepLoad: stepLoad, landingDamage: landingDamage, applyLanding: applyLanding, recalcCondition: recalcCondition,
     loadPoints: loadPoints, loadHit: loadHit, carBoxes: carBoxes, makeLift: makeLift, stepLift: stepLift, loadBottomY: loadBottomY, slotClearY: slotClearY,
     damageNeighbor: damageNeighbor, applyClawContact: applyClawContact,
-    inZone: inZone, score: score, conditionLabel: conditionLabel, maxTotal: maxTotal, rank: rank, simulate: simulate,
+    inZone: inZone, score: score, conditionLabel: conditionLabel, maxTotal: maxTotal, outcome: outcome, rank: rank, simulate: simulate,
     swingAmp: swingAmp, carefulDriver: carefulDriver, carUnder: carUnder, craneAxis: craneAxis, swingDamp: swingDamp, EMPTY_SWING: EMPTY_SWING
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
