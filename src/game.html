@@ -1,0 +1,2015 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>現実版クレーンゲーム 駐車場編</title>
+<meta name="description" content="駐車場にびっしり停まった本物サイズの車を、巨大クレーンで1台ずつ釣り上げる3Dミニゲーム。囲まれた車ほど高いけど、隣にぶつけたら弁償。">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="theme-color" content="#ffcc1a">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="現実版クレーンゲーム 駐車場編">
+<meta property="og:title" content="現実版クレーンゲーム 駐車場編">
+<meta property="og:description" content="駐車場にびっしり停まった本物サイズの車を、巨大クレーンで1台ずつ釣り上げる3Dミニゲーム。囲まれた車ほど高いけど、隣にぶつけたら弁償。">
+<meta property="og:url" content="https://game.chozo.net/real-crane-game/">
+<meta property="og:image" content="https://game.chozo.net/real-crane-game/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="駐車場の車を巨大クレーンで釣り上げる「現実版クレーンゲーム 駐車場編」">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root { --ink:#1d1a14; --cream:#fff8e6; --yel:#ffcc1a; --red:#e8452c; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:#0d1218; overflow:hidden; touch-action:none;
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Yu Gothic", Meiryo, sans-serif; }
+  #app { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); overflow:hidden; background:#9cc6e6; user-select:none; -webkit-user-select:none; }
+  #stage { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  #ui { position:absolute; inset:0; pointer-events:none; color:var(--cream); }
+  #ui button { pointer-events:auto; font-family:inherit; cursor:pointer; touch-action:none; }
+  .panel { position:absolute; left:0; right:0; display:none; }
+  .show { display:block; }
+  .nw { display:inline-block; white-space:nowrap; }
+
+  /* 上部 HUD */
+  #hud { top:0; padding:calc(var(--u)*2.4) calc(var(--u)*3) calc(var(--u)*3); background:linear-gradient(180deg,rgba(10,14,20,.62),rgba(10,14,20,.38) 70%,rgba(10,14,20,0)); }
+  .hrow { display:flex; justify-content:space-between; align-items:center; gap:calc(var(--u)*2); }
+  .chip { background:rgba(16,20,26,.72); border-radius:calc(var(--u)*2.4); padding:calc(var(--u)*1.2) calc(var(--u)*2.6); font-weight:800;
+    font-size:calc(var(--u)*4.2); line-height:1.2; white-space:nowrap; box-shadow:0 3px 10px rgba(0,0,0,.3); }
+  .chip b { color:var(--yel); font-variant-numeric:tabular-nums; }
+  #hPrize { margin-top:calc(var(--u)*1.6); display:flex; align-items:center; gap:calc(var(--u)*2); }
+  #hPrize .name { font-size:calc(var(--u)*5.4); font-weight:900; text-shadow:0 2px 0 #000, 0 0 10px rgba(0,0,0,.7); white-space:nowrap; }
+  #hPrize .val { font-size:calc(var(--u)*4); font-weight:800; color:var(--ink); background:var(--yel); border-radius:99px; padding:calc(var(--u)*.5) calc(var(--u)*2.2); white-space:nowrap; }
+  #hTries { margin-left:auto; font-size:calc(var(--u)*3.8); font-weight:800; white-space:nowrap; text-shadow:0 2px 4px #000; }
+  #hCond { margin-top:calc(var(--u)*1); font-size:calc(var(--u)*3.7); font-weight:800; text-shadow:0 2px 4px #000; min-height:1.3em; white-space:nowrap; }
+  #hCond .bad { color:#ffb02e; }
+
+  /* 傾き・揺れゲージ */
+  #gauges { bottom:calc(var(--u)*57); padding:0 calc(var(--u)*4); }
+  .g { display:flex; align-items:center; gap:calc(var(--u)*2); margin-top:calc(var(--u)*1.4); }
+  .g span { width:calc(var(--u)*11); font-size:calc(var(--u)*3.8); font-weight:800; text-shadow:0 2px 4px #000; white-space:nowrap; }
+  .g .bar { position:relative; flex:1; height:calc(var(--u)*3.2); border-radius:99px; background:rgba(10,14,20,.6); box-shadow:inset 0 1px 3px rgba(0,0,0,.6); overflow:hidden; }
+  .g .fill { position:absolute; left:0; top:0; bottom:0; width:0; border-radius:99px; background:linear-gradient(90deg,#7be36b,#ffd23a 60%,#ff5a3a); }
+  .g .mk { position:absolute; top:-10%; bottom:-10%; width:calc(var(--u)*.7); background:#fff; opacity:.95; }
+  .g em { width:calc(var(--u)*10); text-align:right; font-style:normal; font-size:calc(var(--u)*3.6); font-variant-numeric:tabular-nums; font-weight:800; text-shadow:0 2px 4px #000; white-space:nowrap; }
+
+  #msg { position:absolute; left:3%; right:3%; bottom:calc(var(--u)*46); text-align:center; font-size:calc(var(--u)*4.2); font-weight:800; line-height:1.35;
+    text-shadow:0 2px 0 #000, 0 0 12px rgba(0,0,0,.85); }
+
+  /* 操作パネル */
+  #ctl { bottom:0; height:calc(var(--u)*44); background:linear-gradient(180deg,rgba(28,32,38,.0),rgba(28,32,38,.92) 18%, #23272d); }
+  .pad { position:absolute; left:calc(var(--u)*4); bottom:calc(var(--u)*4); width:calc(var(--u)*50); height:calc(var(--u)*36); }
+  .pad button { position:absolute; width:calc(var(--u)*16.5); height:calc(var(--u)*12.5); border:none; border-radius:calc(var(--u)*3);
+    background:linear-gradient(#f4f1ea,#cfc8b8); color:#2b2a26; font-size:calc(var(--u)*7); font-weight:900; line-height:1;
+    box-shadow:0 calc(var(--u)*1.2) 0 #77705f, 0 calc(var(--u)*2) calc(var(--u)*3) rgba(0,0,0,.45); }
+  .pad button.on { transform:translateY(calc(var(--u)*1)); box-shadow:0 calc(var(--u)*.3) 0 #77705f; background:linear-gradient(#ffe48a,#f2c230); }
+  .pad button small { display:block; font-size:calc(var(--u)*2.7); font-weight:700; margin-top:calc(var(--u)*.6); opacity:.75; }
+  #bU { left:calc(var(--u)*16.75); top:0; } #bD { left:calc(var(--u)*16.75); bottom:0; }
+  #bL { left:0; top:calc(var(--u)*11.75); } #bR { right:0; top:calc(var(--u)*11.75); }
+  #act { position:absolute; right:calc(var(--u)*5); bottom:calc(var(--u)*6); width:calc(var(--u)*36); height:calc(var(--u)*32); border:none; border-radius:999px;
+    background:radial-gradient(circle at 50% 35%, #ff7a5c, #d8321b 70%); color:#fff; font-size:calc(var(--u)*7.6); font-weight:900; line-height:1.15; letter-spacing:.04em;
+    box-shadow:0 calc(var(--u)*1.8) 0 #7d1607, 0 calc(var(--u)*3) calc(var(--u)*4) rgba(0,0,0,.5); text-shadow:0 2px 0 rgba(0,0,0,.35); }
+  #act small { display:block; font-size:calc(var(--u)*3.2); font-weight:700; letter-spacing:0; margin-top:calc(var(--u)*.8); opacity:.9; }
+  #act.on { transform:translateY(calc(var(--u)*1.4)); box-shadow:0 calc(var(--u)*.4) 0 #7d1607; }
+  #act:disabled { filter:grayscale(.9) brightness(.75); }
+
+  /* v2.1：爪の真下の車（狙い）の情報。HUD の下に常時 */
+  #hAim { margin-top:calc(var(--u)*1); display:inline-flex; align-items:center; gap:calc(var(--u)*2.2); background:rgba(255,250,236,.94); color:var(--ink);
+    border-radius:calc(var(--u)*2.4); padding:calc(var(--u)*1) calc(var(--u)*2.6); font-size:calc(var(--u)*3.7); font-weight:800; white-space:nowrap; box-shadow:0 3px 10px rgba(0,0,0,.3); }
+  #hAim .stars { color:#e0a100; letter-spacing:.05em; } #hAim .stars i { color:#cfc6b0; font-style:normal; }
+  #hAim .k { color:#6b6455; font-weight:700; }
+  #hAim b.tight { color:#d8321b; } #hAim b.mid { color:#c98400; } #hAim b.wide { color:#2f8a3c; }
+  #hAim.none { background:rgba(16,20,26,.72); color:var(--cream); }
+
+  /* 中央のバナー・ポップ */
+  #banner { position:absolute; left:0; right:0; top:22%; text-align:center; pointer-events:none; opacity:0; transition:opacity .3s; }
+  #banner.vis { opacity:1; }
+  #banner .r { font-size:calc(var(--u)*5); font-weight:900; letter-spacing:.2em; color:var(--yel); text-shadow:0 2px 0 #000, 0 0 12px rgba(0,0,0,.8); }
+  #banner .t { font-size:calc(var(--u)*9); font-weight:900; text-shadow:0 4px 0 #000, 0 0 18px rgba(0,0,0,.8); line-height:1.2; }
+  #banner .s { font-size:calc(var(--u)*4.2); font-weight:800; text-shadow:0 2px 0 #000, 0 0 10px rgba(0,0,0,.9); margin-top:calc(var(--u)*1); padding:0 6%; line-height:1.4; }
+  #pops { position:absolute; inset:0; pointer-events:none; }
+  .pop { position:absolute; left:50%; transform:translate(-50%,0); font-size:calc(var(--u)*5.6); font-weight:900; color:#ffb02e; white-space:nowrap; text-align:center; line-height:1.25;
+    text-shadow:0 3px 0 #000, 0 0 12px rgba(0,0,0,.8); animation:popup 2.2s ease-out forwards; background:rgba(12,14,18,.72); border-radius:calc(var(--u)*3); padding:calc(var(--u)*1.2) calc(var(--u)*3.4); }
+  .pop small { display:block; font-size:calc(var(--u)*4); color:#fff; }
+  .pop.hard { color:#ff5a3a; font-size:calc(var(--u)*7); }
+  @keyframes popup { 0% { opacity:0; transform:translate(-50%,20%) scale(.7); } 5% { opacity:1; transform:translate(-50%,0) scale(1.1); } 75% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-110%) scale(1); } }
+  #big { position:absolute; left:0; right:0; top:15%; text-align:center; font-size:calc(var(--u)*24); font-weight:900; letter-spacing:.04em; pointer-events:none; display:none;
+    color:#fff3a0; text-shadow:0 calc(var(--u)*1.2) 0 #c2410c, 0 calc(var(--u)*2.2) 0 #4a1a04, 0 0 30px rgba(0,0,0,.6); }
+  #big.fail { color:#dfe7ef; text-shadow:0 calc(var(--u)*1.2) 0 #39465a, 0 calc(var(--u)*2.2) 0 #10151c, 0 0 30px rgba(0,0,0,.6); font-size:calc(var(--u)*17); }
+  #big.vis { display:block; animation:bigin .5s cubic-bezier(.2,1.6,.4,1) both; }
+  @keyframes bigin { 0% { transform:scale(.2) rotate(-8deg); opacity:0; } 100% { transform:scale(1) rotate(-4deg); opacity:1; } }
+  #flash { position:absolute; inset:0; pointer-events:none; background:radial-gradient(circle, rgba(255,220,120,0) 40%, rgba(255,120,40,.45)); opacity:0; }
+  /* v2.2：爆発の閃光（白→橙）とシャッターの白 */
+  #boom { position:absolute; inset:0; pointer-events:none; background:radial-gradient(circle at 50% 45%, #fffbe8 0%, #ffd27a 35%, rgba(255,110,30,.85) 75%, rgba(120,30,0,.7)); opacity:0; mix-blend-mode:screen; }
+  #shutter { position:absolute; inset:0; pointer-events:none; background:#fff; opacity:0; }
+
+  /* v2.2：ポラロイド風の写真（結果カードの上）。v2.3：写真が主役になる大きさ（幅 88%）に */
+  #photo { position:relative; width:calc(var(--u)*88); margin:0 auto calc(var(--u)*-2.4); padding:calc(var(--u)*2.4) calc(var(--u)*2.4) 0; background:#fdfcf7;
+    border-radius:calc(var(--u)*.6); box-shadow:0 calc(var(--u)*1.6) calc(var(--u)*4) rgba(0,0,0,.55), 0 0 0 1px rgba(0,0,0,.06); transform:rotate(-2deg); z-index:2; display:none; }
+  #photo.show { display:block; animation:photoin .55s cubic-bezier(.2,1.4,.4,1) both; }
+  #photo.fail { transform:rotate(2deg); }
+  #photo.fail.show { animation-name:photoinf; }
+  @keyframes photoin { 0% { transform:translateY(-40%) rotate(-14deg) scale(.8); opacity:0; } 100% { transform:rotate(-2deg); opacity:1; } }
+  @keyframes photoinf { 0% { transform:translateY(-40%) rotate(14deg) scale(.8); opacity:0; } 100% { transform:rotate(2deg); opacity:1; } }
+  #photo .pimg { position:relative; width:100%; aspect-ratio:1/1; background:#1b1d20; overflow:hidden; }
+  #photo img { display:block; width:100%; height:100%; object-fit:cover; animation:develop 1.6s ease-out both; }
+  @keyframes develop { 0% { filter:brightness(1.9) saturate(0) contrast(.5); } 60% { filter:brightness(1.1) saturate(.8) contrast(.95); } 100% { filter:none; } }
+  #photo .tape { position:absolute; left:50%; top:calc(var(--u)*-2.2); width:calc(var(--u)*20); height:calc(var(--u)*4.4); transform:translateX(-50%) rotate(2deg);
+    background:rgba(255,236,170,.78); box-shadow:0 1px 2px rgba(0,0,0,.2); }
+  #pCap { height:calc(var(--u)*10.5); display:flex; flex-direction:column; justify-content:center; align-items:center; color:#2a2620; line-height:1.2; }
+  #pCap b { font-size:calc(var(--u)*5.2); font-weight:900; white-space:nowrap; letter-spacing:.02em; }
+  #pCap small { font-size:calc(var(--u)*3.1); font-weight:700; color:#7a7262; white-space:nowrap; margin-top:calc(var(--u)*.4); }
+  #photo.fail #pCap b { color:#b3261a; }
+
+  /* カード（ラウンド結果・タイトル・最終結果） */
+  .sheet { background:rgba(255,250,236,.97); color:var(--ink); border-radius:calc(var(--u)*4); padding:calc(var(--u)*4) calc(var(--u)*4.4); box-shadow:0 12px 30px rgba(0,0,0,.5); }
+  #card { bottom:3%; padding:0 4%; }
+  #card .sheet { text-align:center; }
+  /* v2.3：写真つきのカードは文字の板を詰めて、写真に場所を譲る */
+  #card.wp .sheet { padding:calc(var(--u)*4.4) calc(var(--u)*4) calc(var(--u)*3.4); border-radius:calc(var(--u)*3.4); }
+  #card.wp #cTitle { font-size:calc(var(--u)*6.2); }
+  #card.wp #cWhy { font-size:calc(var(--u)*3.4); line-height:1.38; margin:calc(var(--u)*1) 0 calc(var(--u)*1.2); }
+  #card.wp #cScore { font-size:calc(var(--u)*3.7); line-height:1.3; }
+  #card.wp #cScore b { font-size:calc(var(--u)*8); }
+  #card.wp .big { margin-top:calc(var(--u)*2); padding:calc(var(--u)*2.4) calc(var(--u)*10); font-size:calc(var(--u)*5.8); }
+  #cTitle { font-size:calc(var(--u)*7.4); font-weight:900; line-height:1.15; }
+  #cWhy { font-size:calc(var(--u)*3.7); font-weight:700; line-height:1.45; margin:calc(var(--u)*1.6) 0 calc(var(--u)*2); }
+  #cScore { font-size:calc(var(--u)*4.1); font-weight:800; line-height:1.45; }
+  #cScore b { font-size:calc(var(--u)*9.5); color:var(--red); font-variant-numeric:tabular-nums; }
+  .big { border:none; border-radius:999px; padding:calc(var(--u)*3) calc(var(--u)*10); font-size:calc(var(--u)*6.4); line-height:1.15; white-space:nowrap; font-weight:900;
+    color:#fff; background:linear-gradient(#ff7a5c,#d8321b); box-shadow:0 calc(var(--u)*1.4) 0 #7d1607, 0 calc(var(--u)*2.4) calc(var(--u)*4) rgba(0,0,0,.4); letter-spacing:.06em; margin-top:calc(var(--u)*3); }
+  .big:active { transform:translateY(calc(var(--u)*1)); box-shadow:0 calc(var(--u)*.4) 0 #7d1607; }
+
+  #title { top:0; bottom:0; background:linear-gradient(180deg,rgba(10,20,34,.6),rgba(10,20,34,0) 42%,rgba(10,20,34,0) 52%,rgba(10,20,34,.8)); }
+  #title .logo { position:absolute; left:0; right:0; top:6%; text-align:center; }
+  #title .logo small { display:block; font-size:calc(var(--u)*5); font-weight:900; letter-spacing:.3em; color:var(--yel); text-shadow:0 2px 0 #000; }
+  #title .logo h1 { margin:calc(var(--u)*1) 0 0; font-size:calc(var(--u)*12.5); font-weight:900; line-height:1.05; color:#fff; letter-spacing:.02em;
+    text-shadow:0 calc(var(--u)*1) 0 #c2410c, 0 calc(var(--u)*2) 0 #4a1a04, 0 0 24px rgba(0,0,0,.5); }
+  #title .logo h1 em { font-style:normal; display:inline-block; font-size:.62em; color:var(--yel); margin-top:calc(var(--u)*1); }
+  #title .logo p { margin:calc(var(--u)*3) 0 0; font-size:calc(var(--u)*4.3); font-weight:800; text-shadow:0 2px 0 #000, 0 0 10px #000; line-height:1.5; }
+  #title .foot { position:absolute; left:0; right:0; bottom:5%; text-align:center; padding:0 5%; }
+  #title .how { font-size:calc(var(--u)*3.7); font-weight:700; line-height:1.5; text-shadow:0 2px 0 #000, 0 0 10px #000; }
+
+  #result { top:0; bottom:0; background:rgba(10,16,24,.55); }
+  #result .sheet { position:absolute; left:5%; right:5%; top:9%; text-align:center; }
+  #rHead { font-size:calc(var(--u)*5); font-weight:900; letter-spacing:.2em; color:#8a6a10; }
+  #rTotal { font-size:calc(var(--u)*15); font-weight:900; color:var(--red); line-height:1.1; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  #rTotal small { font-size:calc(var(--u)*5); color:var(--ink); margin-left:.2em; }
+  #rRank { font-size:calc(var(--u)*6); font-weight:900; margin:calc(var(--u)*1) 0 calc(var(--u)*3); }
+  #rList { width:100%; border-collapse:collapse; font-size:calc(var(--u)*3.9); font-weight:700; }
+  #rList td { padding:calc(var(--u)*1.2) calc(var(--u)*.8); border-top:1px solid rgba(0,0,0,.12); white-space:nowrap; }
+  #rList td:first-child { text-align:left; } #rList td:last-child { text-align:right; font-variant-numeric:tabular-nums; font-weight:900; }
+  #rList .st { font-size:calc(var(--u)*3.3); color:#6b6455; }
+  #rList .neg { color:#c0301c; }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="stage"></canvas>
+  <div id="ui">
+    <div id="flash"></div>
+    <div id="boom"></div>
+    <div id="hud" class="panel">
+      <div class="hrow"><div class="chip">ROUND <b id="hRound">1</b>/5</div><div class="chip">合計 <b id="hScore">0</b>万</div></div>
+      <div id="hPrize"><span class="name" id="hName"></span><span class="val" id="hVal"></span><span id="hTries"></span></div>
+      <div id="hAimWrap"><div id="hAim"></div></div>
+      <div id="hCond"></div>
+    </div>
+
+    <div id="gauges" class="panel">
+      <div class="g"><span>傾き</span><div class="bar"><i class="fill" id="gTilt"></i><i class="mk" id="mTilt"></i></div><em id="vTilt">0°</em></div>
+      <div class="g"><span>揺れ</span><div class="bar"><i class="fill" id="gSwing"></i><i class="mk" id="mSwing"></i></div><em id="vSwing">0°</em></div>
+    </div>
+
+    <div id="ctl" class="panel">
+      <div id="msg"></div>
+      <div class="pad">
+        <button id="bU" data-dir="u">▲<small>奥へ</small></button>
+        <button id="bL" data-dir="l">◀<small>左へ</small></button>
+        <button id="bR" data-dir="r">▶<small>右へ</small></button>
+        <button id="bD" data-dir="d">▼<small>手前へ</small></button>
+      </div>
+      <button id="act">下ろす<small>爪を下ろす</small></button>
+    </div>
+
+    <div id="banner"><div class="r" id="bnR"></div><div class="t" id="bnT"></div><div class="s" id="bnS"></div></div>
+    <div id="pops"></div>
+    <div id="big"></div>
+
+    <div id="card" class="panel">
+      <div id="photo"><i class="tape"></i><div class="pimg"><img id="pImg" alt=""></div><div id="pCap"><b id="pCapT"></b><small id="pCapS"></small></div></div>
+      <div class="sheet">
+        <div id="cTitle"></div>
+        <div id="cWhy"></div>
+        <div id="cScore"></div>
+        <button class="big" id="cBtn">次へ</button>
+      </div>
+    </div>
+
+    <div id="title" class="panel">
+      <div class="logo"><small>REAL SIZE</small><h1>現実版<br>クレーン<br>ゲーム<br><em>駐車場編</em></h1>
+        <p><span class="nw">びっしり停まった駐車場から、</span><br><span class="nw">好きな1台を巨大クレーンで釣り上げろ。</span></p></div>
+      <div class="foot">
+        <div class="how"><span class="nw">囲まれた車ほど高い。</span><span class="nw">でも隣にぶつけたら弁償。</span></div>
+        <button class="big" id="startBtn">スタート</button>
+      </div>
+    </div>
+
+    <div id="result" class="panel">
+      <div class="sheet">
+        <div id="rHead">RESULT</div>
+        <div id="rTotal">0<small>万円</small></div>
+        <div id="rRank"></div>
+        <table id="rList"></table>
+        <button class="big" id="againBtn">もう一度</button>
+      </div>
+    </div>
+    <div id="shutter"></div>
+  </div>
+</div>
+
+<script>
+/*__THREE__*/
+</script>
+<script>
+/*__LOGIC__*/
+</script>
+<script>
+(function () {
+'use strict';
+var L = window.CraneLogic, T = THREE, DEG = L.DEG;
+var $ = function (id) { return document.getElementById(id); };
+var app = $('app'), canvas = $('stage');
+var Q = new URLSearchParams(location.search);
+var START_ROUND = L.clamp(parseInt(Q.get('round') || '1', 10) - 1 || 0, 0, 4);
+var SEED = parseInt(Q.get('seed') || '0', 10) || (Math.floor(Math.random() * 1e6) + 1);
+var VOFF = 0.13; // 下の操作パネルの分、注視点を画面の上寄りに描く
+
+// ------------------------------------------------------------------ レイアウト（9:16）
+var W = 360, H = 640;
+function resize() {
+  var vw = window.innerWidth, vh = window.innerHeight;
+  if (vw / vh > 9 / 16) { H = vh; W = Math.round(vh * 9 / 16); } else { W = vw; H = Math.round(vw * 16 / 9); }
+  app.style.width = W + 'px'; app.style.height = H + 'px';
+  app.style.setProperty('--u', (W / 100) + 'px');
+  if (renderer) { renderer.setSize(W, H, false); camera.aspect = W / H; camera.setViewOffset(W, H * (1 + 2 * VOFF), 0, H * 2 * VOFF, W, H); camera.updateProjectionMatrix(); }
+}
+
+// ------------------------------------------------------------------ 効果音（WebAudio 合成）
+var Sfx = {
+  ctx: null, master: null, noiseBuf: null, motor: null, hoist: null,
+  init: function () {
+    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    var c = this.ctx = new AC();
+    this.master = c.createGain(); this.master.gain.value = 0.55; this.master.connect(c.destination);
+    var n = c.sampleRate * 1.5, b = this.noiseBuf = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    this.motor = this.loop('sawtooth', 48, 260);
+    this.hoist = this.loop('square', 70, 520);
+  },
+  loop: function (type, f, lp) {
+    var c = this.ctx, o = c.createOscillator(), o2 = c.createOscillator(), fl = c.createBiquadFilter(), g = c.createGain();
+    o.type = type; o.frequency.value = f; o2.type = 'triangle'; o2.frequency.value = f * 1.5;
+    fl.type = 'lowpass'; fl.frequency.value = lp; g.gain.value = 0;
+    o.connect(fl); o2.connect(fl); fl.connect(g); g.connect(this.master); o.start(); o2.start();
+    return { o: o, o2: o2, g: g, f: f };
+  },
+  setLoop: function (l, vol, pitch) {
+    if (!this.ctx || !l.g) return; var t = this.ctx.currentTime;
+    l.g.gain.setTargetAtTime(vol, t, 0.08);
+    l.o.frequency.setTargetAtTime(l.f * pitch, t, 0.1); l.o2.frequency.setTargetAtTime(l.f * 1.5 * pitch, t, 0.1);
+  },
+  tone: function (f, dur, type, vol, when, slideTo) {
+    if (!this.ctx) return; var c = this.ctx, t = c.currentTime + (when || 0), o = c.createOscillator(), g = c.createGain();
+    o.type = type || 'square'; o.frequency.setValueAtTime(f, t); if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.2, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.05);
+  },
+  noise: function (dur, vol, f0, f1, q, when) {
+    if (!this.ctx) return; var c = this.ctx, t = c.currentTime + (when || 0), s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = this.noiseBuf; fl.type = 'bandpass'; fl.Q.value = q || 1; fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(f1 || f0, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(fl); fl.connect(g); g.connect(this.master); s.start(t); s.stop(t + dur + 0.05);
+  },
+  click: function () { this.tone(900, 0.05, 'square', 0.08); },
+  select: function () { this.tone(660, 0.07, 'square', 0.08); this.tone(990, 0.1, 'square', 0.08, 0.06); },
+  aim: function () { this.tone(1180, 0.035, 'square', 0.035); },
+  clank: function () { this.noise(0.25, 0.6, 2400, 900, 4); this.tone(180, 0.25, 'square', 0.18, 0, 90); this.tone(620, 0.12, 'triangle', 0.15, 0.03); },
+  thud: function (k) { this.noise(0.5, 0.5 * (k || 1), 300, 60, 0.8); this.tone(70, 0.4, 'sine', 0.4 * (k || 1), 0, 35); },
+  crash: function () { this.noise(1.2, 0.9, 1800, 120, 0.6); this.noise(0.6, 0.6, 5000, 2000, 2, 0.05); this.tone(60, 0.8, 'sine', 0.5, 0, 28); },
+  // こすった：金属が擦れる「キキーッ」
+  scrape: function () { this.noise(0.45, 0.35, 5200, 2600, 6); this.tone(1900, 0.4, 'sawtooth', 0.05, 0, 1500); this.tone(2400, 0.3, 'sawtooth', 0.035, 0.05, 2100); },
+  // ぶつけた：「ガチン！」
+  bang: function () { this.noise(0.35, 0.9, 3200, 700, 3); this.tone(150, 0.35, 'square', 0.25, 0, 70); this.tone(880, 0.18, 'triangle', 0.22, 0.01, 620); this.tone(1320, 0.12, 'square', 0.08, 0.02); this.noise(0.6, 0.4, 400, 90, 0.8, 0.03); },
+  get: function () { var n = [523, 659, 784, 1046, 1318]; for (var i = 0; i < n.length; i++) this.tone(n[i], 0.22, 'square', 0.12, i * 0.09); this.tone(1568, 0.6, 'triangle', 0.15, 0.48); },
+  fail: function () { this.tone(392, 0.25, 'square', 0.12, 0); this.tone(330, 0.25, 'square', 0.12, 0.22); this.tone(262, 0.6, 'square', 0.12, 0.44, 200); },
+  beep: function () { this.tone(1320, 0.07, 'square', 0.07); },
+  // v2.2：低域のノイズ（爆発の「ドーン」の胴体）
+  rumble: function (dur, vol, f0, f1, when) {
+    if (!this.ctx) return; var c = this.ctx, t = c.currentTime + (when || 0), s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = this.noiseBuf; s.loop = true; fl.type = 'lowpass'; fl.Q.value = 0.7; fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(vol * 0.35, t + dur * 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(fl); fl.connect(g); g.connect(this.master); s.start(t); s.stop(t + dur + 0.05);
+  },
+  // 爆発：衝突の「ガシャーン」→ 低い「ドーン」→ ガラスと部品の降る音 → 炎のパチパチ。激しいほど大きく長い
+  explode: function (k) {
+    if (!this.ctx) return;
+    var c = this.ctx, t = c.currentTime;
+    // 一瞬だけ他の音を押さえる（ダッキング）
+    this.master.gain.cancelScheduledValues(t); this.master.gain.setValueAtTime(0.55, t); this.master.gain.linearRampToValueAtTime(0.75, t + 0.02); this.master.gain.setTargetAtTime(0.55, t + 0.6, 0.5);
+    this.noise(0.5, 0.9, 3800, 900, 1.5);                                     // ガシャーン（金属）
+    this.rumble(1.6 + 2.2 * k, 0.55 + 0.45 * k, 2200, 60);                     // ドーン（胴体）
+    this.tone(70, 1.2 + k, 'sine', 0.5 + 0.3 * k, 0, 24);                       // 腹に来る低音
+    this.tone(46, 1.6 + k, 'triangle', 0.35 * k + 0.15, 0.03, 20);
+    this.noise(0.9, 0.5, 6000, 2500, 3, 0.04);                                 // ガラスが割れる
+    var n = 4 + Math.round(10 * k);
+    for (var i = 0; i < n; i++) {                                              // 部品が落ちてくる「カン」「ゴトッ」
+      var w = 0.35 + Math.random() * (0.9 + 1.4 * k);
+      if (i % 3) this.tone(500 + Math.random() * 1400, 0.12, 'square', 0.05 + 0.04 * k, w, 300 + Math.random() * 300);
+      else this.noise(0.18, 0.25 + 0.15 * k, 600, 180, 1.2, w);
+    }
+    var m = 10 + Math.round(30 * k);
+    for (var j = 0; j < m; j++) this.noise(0.03 + Math.random() * 0.04, 0.06 + Math.random() * 0.1, 2500 + Math.random() * 3000, 1200, 2, 0.4 + Math.random() * (2 + 3 * k)); // パチパチ
+  },
+  // カメラのシャッター「カシャッ」
+  shutter: function () { this.noise(0.035, 0.35, 4200, 3000, 2); this.tone(2200, 0.03, 'square', 0.05, 0.005); this.noise(0.06, 0.3, 2400, 1500, 2, 0.07); this.tone(1500, 0.04, 'square', 0.04, 0.075); }
+};
+
+// ------------------------------------------------------------------ three.js シーン
+var renderer, scene, camera;
+resize();
+// v2.2：preserveDrawingBuffer は使わない（常時有効は描画が遅くなる）。写真は撮る瞬間にもう一度描いて、同じタスク内で読み出す
+renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true });
+var maxPR = Math.min(window.devicePixelRatio || 1, 2), curPR = maxPR, frameAvg = 16, prCooldown = 0;
+var FIXED_PR = /[?&]fixedpr\b/.test(location.search);
+renderer.setPixelRatio(curPR); renderer.setSize(W, H, false);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFShadowMap;
+renderer.outputColorSpace = T.SRGBColorSpace;
+renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+scene = new T.Scene();
+camera = new T.PerspectiveCamera(46, W / H, 0.5, 600);
+resize();
+
+function canvasTex(w, h, draw, rep) {
+  var c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4;
+  if (rep) { t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(rep[0], rep[1]); }
+  return t;
+}
+function mat(color, opts) { var o = { color: color }; for (var k in opts) if (k !== 'roughness' && k !== 'metalness') o[k] = opts[k]; return new T.MeshLambertMaterial(o); }
+function box(w, h, d, m) { var me = new T.Mesh(new T.BoxGeometry(w, h, d), m); me.castShadow = true; me.receiveShadow = true; return me; }
+function hex(c) { return '#' + new T.Color(c).getHexString(); }
+
+// 空
+scene.background = new T.Color(0x8fc0e8);
+(function () {
+  var geo = new T.SphereGeometry(400, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2 + 0.2), pos = geo.attributes.position, col = [];
+  var top = new T.Color(0x3a78c0), mid = new T.Color(0x9cc8ec), hor = new T.Color(0xe6eef0), c = new T.Color();
+  for (var i = 0; i < pos.count; i++) {
+    var h = pos.getY(i) / 400;
+    if (h > 0.25) c.copy(mid).lerp(top, Math.min(1, (h - 0.25) / 0.6)); else c.copy(hor).lerp(mid, Math.max(0, h / 0.25));
+    col.push(c.r, c.g, c.b);
+  }
+  geo.setAttribute('color', new T.Float32BufferAttribute(col, 3));
+  var dome = new T.Mesh(geo, new T.MeshBasicMaterial({ vertexColors: true, side: T.BackSide, fog: false, depthWrite: false }));
+  dome.renderOrder = -10; scene.add(dome);
+})();
+scene.fog = new T.Fog(0xd6e2e8, 70, 230);
+var hemi = new T.HemisphereLight(0xdfefff, 0x6a6a70, 1.3); scene.add(hemi);
+var sun = new T.DirectionalLight(0xfff1d6, 2.3);
+sun.position.set(-18, 34, 14); sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+var sc = sun.shadow.camera; sc.left = -22; sc.right = 22; sc.top = 22; sc.bottom = -22; sc.near = 5; sc.far = 90;
+sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.04;
+scene.add(sun); scene.add(sun.target);
+
+var LOT = L.LOT, Z = L.ZONE, Yd = L.YARD, frontFence = [], FRONT_Z = 99;
+// ------------------------------------------------------------------ 駐車場（アスファルト・白線・車止め・番号）
+(function buildLot() {
+  var asphalt = canvasTex(512, 512, function (g, w, h) {
+    g.fillStyle = '#55585c'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 14000; i++) { var v = 60 + Math.random() * 70 | 0; g.fillStyle = 'rgba(' + v + ',' + v + ',' + (v + 4) + ',' + (0.3 + Math.random() * 0.5) + ')'; var s = 1 + Math.random() * 2.2; g.fillRect(Math.random() * w, Math.random() * h, s, s); }
+    g.strokeStyle = 'rgba(30,30,32,.25)'; g.lineWidth = 2;
+    for (var k = 0; k < 6; k++) { g.beginPath(); var x = Math.random() * w, y = Math.random() * h; g.moveTo(x, y); for (var j = 0; j < 6; j++) { x += (Math.random() - 0.5) * 60; y += Math.random() * 40; g.lineTo(x, y); } g.stroke(); }
+  }, [8, 8]);
+  var ground = new T.Mesh(new T.PlaneGeometry(60, 50), mat(0xffffff, { map: asphalt }));
+  ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, -3); ground.receiveShadow = true; scene.add(ground);
+  // 外側（歩道と植え込み）
+  var curbM = mat(0xb9b5ab), grassM = mat(0x6f8f48);
+  var outer = new T.Mesh(new T.RingGeometry(34, 260, 40, 1), grassM); outer.rotation.x = -Math.PI / 2; outer.position.set(0, -0.02, -3); outer.receiveShadow = true; scene.add(outer);
+  // 白線
+  var lineM = new T.MeshLambertMaterial({ color: 0xf2f2ee });
+  function line(x0, z0, x1, z1, wdt) {
+    var len = Math.hypot(x1 - x0, z1 - z0), m = new T.Mesh(new T.PlaneGeometry(wdt || 0.13, len), lineM);
+    m.rotation.x = -Math.PI / 2; m.rotation.z = -Math.atan2(x1 - x0, z1 - z0); m.position.set((x0 + x1) / 2, 0.012, (z0 + z1) / 2); m.receiveShadow = true; scene.add(m);
+  }
+  for (var r = 0; r < LOT.rows; r++) {
+    var zc = LOT.rowZ[r], za = zc - LOT.SD / 2, zb = zc + LOT.SD / 2;
+    for (var c = 0; c <= LOT.cols; c++) { var x = LOT.x0 + c * LOT.SW; line(x, za + 0.15, x, zb - 0.15); }
+  }
+  line(LOT.x0, LOT.rowZ[0] + LOT.SD / 2, LOT.x1, LOT.rowZ[0] + LOT.SD / 2, 0.15);   // 背中合わせの境
+  line(LOT.x0, LOT.z0, LOT.x1, LOT.z0, 0.15);
+  line(LOT.x0, LOT.z1, LOT.x1, LOT.z1, 0.15);
+  // 通路の矢印
+  var arrowTex = canvasTex(128, 256, function (g, w, h) { g.fillStyle = 'rgba(240,240,236,.85)'; g.beginPath(); g.moveTo(w / 2, 10); g.lineTo(w - 14, 90); g.lineTo(w * 0.66, 90); g.lineTo(w * 0.66, h - 10); g.lineTo(w * 0.34, h - 10); g.lineTo(w * 0.34, 90); g.lineTo(14, 90); g.closePath(); g.fill(); });
+  [-6, 6].forEach(function (x, i) { var a = new T.Mesh(new T.PlaneGeometry(0.9, 1.8), new T.MeshLambertMaterial({ map: arrowTex, transparent: true, depthWrite: false })); a.rotation.x = -Math.PI / 2; a.rotation.z = i ? Math.PI / 2 : -Math.PI / 2; a.position.set(x, 0.014, (LOT.z1 + Z.z0) / 2); scene.add(a); });
+  // 車止めと区画番号
+  var stopM = mat(0xc9c4b8);
+  for (var r2 = 0; r2 < LOT.rows; r2++) for (var c2 = 0; c2 < LOT.cols; c2++) {
+    var sp = L.stallPos(r2, c2), zEnd = r2 === 0 ? sp.z - LOT.SD / 2 + 0.55 : sp.z + LOT.SD / 2 - 0.55;
+    [-0.55, 0.55].forEach(function (dx) { var b = box(0.6, 0.12, 0.16, stopM); b.position.set(sp.x + dx, 0.06, zEnd); scene.add(b); });
+    var num = r2 * LOT.cols + c2 + 1;
+    var numTex = canvasTex(128, 64, function (g, w, h) { g.fillStyle = 'rgba(240,240,236,.8)'; g.font = '900 46px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(num), w / 2, h / 2 + 2); });
+    var nm = new T.Mesh(new T.PlaneGeometry(0.8, 0.4), new T.MeshLambertMaterial({ map: numTex, transparent: true, depthWrite: false }));
+    nm.rotation.x = -Math.PI / 2; if (r2 === 1) nm.rotation.z = Math.PI; nm.position.set(sp.x, 0.014, r2 === 0 ? sp.z - LOT.SD / 2 + 0.25 : sp.z + LOT.SD / 2 - 0.25); scene.add(nm);
+  }
+  // 回収ゾーン
+  var zW = Z.x1 - Z.x0, zD = Z.z1 - Z.z0;
+  var zoneTex = canvasTex(512, 512 * zD / zW | 0, function (g, w, h) {
+    g.fillStyle = 'rgba(255,214,40,.25)'; g.fillRect(0, 0, w, h);
+    var b = 30; g.save(); g.beginPath(); g.rect(0, 0, w, h); g.rect(b, b, w - 2 * b, h - 2 * b); g.clip('evenodd');
+    for (var x = -h; x < w + h; x += 44) { g.fillStyle = '#ffcf1a'; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 22, 0); g.lineTo(x + 22 - h, h); g.lineTo(x - h, h); g.fill(); }
+    g.fillStyle = '#1a1a1a';
+    for (var x2 = -h + 22; x2 < w + h; x2 += 44) { g.beginPath(); g.moveTo(x2, 0); g.lineTo(x2 + 22, 0); g.lineTo(x2 + 22 - h, h); g.lineTo(x2 - h, h); g.fill(); }
+    g.restore();
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '900 120px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('GET', w / 2, h / 2 - 22);
+    g.font = '900 46px sans-serif'; g.fillText('回収ゾーン', w / 2, h / 2 + 70);
+  });
+  var zone = new T.Mesh(new T.PlaneGeometry(zW, zD), new T.MeshLambertMaterial({ map: zoneTex, transparent: true, depthWrite: false }));
+  zone.rotation.x = -Math.PI / 2; zone.position.set((Z.x0 + Z.x1) / 2, 0.02, (Z.z0 + Z.z1) / 2); zone.receiveShadow = true; scene.add(zone);
+
+  // フェンス
+  var fx0 = Yd.xMin - 1.6, fx1 = Yd.xMax + 1.6, fz0 = LOT.z0 - 1.2, fz1 = Z.z1 + 2.2;
+  var meshTex = canvasTex(128, 128, function (g, w, h) {
+    g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(205,210,214,.95)'; g.lineWidth = 3;
+    for (var i = -h; i < w + h; i += 16) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + h, h); g.stroke(); g.beginPath(); g.moveTo(i, h); g.lineTo(i + h, 0); g.stroke(); }
+  });
+  var postM = mat(0x7d858c);
+  function fence(x0, z0, x1, z1, front) {
+    var len = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(len / 3));
+    var t = meshTex.clone(); t.needsUpdate = true; t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(len / 2, 1);
+    var m = new T.Mesh(new T.PlaneGeometry(len, 1.8), new T.MeshLambertMaterial({ map: t, transparent: true, side: T.DoubleSide, alphaTest: 0.3 }));
+    m.position.set((x0 + x1) / 2, 0.95, (z0 + z1) / 2); m.rotation.y = -Math.atan2(z1 - z0, x1 - x0); scene.add(m);
+    if (front) frontFence.push(m);
+    for (var i = 0; i <= n; i++) { var p = box(0.1, 2, 0.1, postM); p.position.set(x0 + (x1 - x0) * i / n, 1, z0 + (z1 - z0) * i / n); scene.add(p); if (front) frontFence.push(p); }
+  }
+  fence(fx0, fz0, fx1, fz0); fence(fx0, fz0, fx0, fz1); fence(fx1, fz0, fx1, fz1);
+  fence(fx0, fz1, -3, fz1, true); fence(3, fz1, fx1, fz1, true); FRONT_Z = fz1;
+  // 縁石
+  [[0, fz0 + 0.3, fx1 - fx0, 0.3], [0, fz1 - 0.3, fx1 - fx0, 0.3]].forEach(function (q) { var cb = box(q[2], 0.15, q[3], curbM); cb.position.set(q[0], 0.075, q[1]); scene.add(cb); });
+  // 街灯
+  var poleM = mat(0x5b636b), lampM = new T.MeshLambertMaterial({ color: 0xfff6d0, emissive: 0xfff0b0, emissiveIntensity: 0.5 });
+  function lamp(x, z, dir) {
+    var p = box(0.18, 7, 0.18, poleM); p.position.set(x, 3.5, z); scene.add(p);
+    var arm = box(1.6, 0.12, 0.12, poleM); arm.position.set(x + dir * 0.8, 6.95, z); scene.add(arm);
+    var hd = box(0.7, 0.18, 0.36, poleM); hd.position.set(x + dir * 1.5, 6.85, z); scene.add(hd);
+    var gl = new T.Mesh(new T.BoxGeometry(0.6, 0.04, 0.3), lampM); gl.position.set(x + dir * 1.5, 6.75, z); scene.add(gl);
+  }
+  lamp(fx0 + 0.3, LOT.rowZ[0], 1); lamp(fx1 - 0.3, LOT.rowZ[0], -1); lamp(fx0 + 0.3, Z.z0 + 1, 1); lamp(fx1 - 0.3, Z.z0 + 1, -1);
+  // 料金所の小屋と看板
+  var booth = box(2, 2.4, 1.6, mat(0xeae6dc)); booth.position.set(fx1 - 2, 1.2, fz1 - 1.6); scene.add(booth);
+  var boothR = box(2.3, 0.2, 1.9, mat(0x2e6fb0)); boothR.position.set(fx1 - 2, 2.5, fz1 - 1.6); scene.add(boothR);
+  var pTex = canvasTex(128, 128, function (g, w, h) { g.fillStyle = '#1f5fbf'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '900 100px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('P', w / 2, h / 2 + 6); });
+  var pSign = new T.Mesh(new T.PlaneGeometry(1.4, 1.4), new T.MeshLambertMaterial({ map: pTex })); pSign.position.set(fx0 + 1.6, 4.4, fz1 + 0.05); scene.add(pSign);
+  var pPole = box(0.12, 3.8, 0.12, poleM); pPole.position.set(fx0 + 1.6, 1.9, fz1); scene.add(pPole);
+  // 木と遠景のビル
+  var trunkM = mat(0x6b4a2e), leafM = mat(0x4f7d3a);
+  function tree(x, z, s) { var t = box(0.35 * s, 2 * s, 0.35 * s, trunkM); t.position.set(x, s, z); scene.add(t); var l = new T.Mesh(new T.IcosahedronGeometry(1.6 * s, 0), leafM); l.position.set(x, 2.6 * s, z); l.castShadow = true; scene.add(l); }
+  for (var i = 0; i < 7; i++) { tree(fx0 - 2.5, fz0 + 2 + i * 3.8, 1 + (i % 3) * 0.2); tree(fx1 + 2.5, fz0 + 3 + i * 3.8, 1 + ((i + 1) % 3) * 0.2); }
+  var winTex = canvasTex(128, 256, function (g, w, h) {
+    g.fillStyle = '#c9cfd6'; g.fillRect(0, 0, w, h);
+    for (var y = 8; y < h; y += 22) for (var x = 8; x < w; x += 20) { g.fillStyle = Math.random() < 0.25 ? '#e9eef4' : '#5d7088'; g.fillRect(x, y, 12, 13); }
+  });
+  var cols = [0xd8d2c4, 0xb9c3cc, 0xe3dccf, 0xa9b5bf, 0xcfc6b4];
+  for (var k = 0; k < 20; k++) {
+    var bw = 7 + (k * 13 % 9), bh = 12 + (k * 29 % 30), bd = 7 + (k * 7 % 6);
+    var bx = -85 + k * 9 + (k % 3) * 2, bz = -45 - (k * 17 % 26);
+    var t2 = winTex.clone(); t2.needsUpdate = true; t2.wrapS = t2.wrapT = T.RepeatWrapping; t2.repeat.set(bw / 8, bh / 14);
+    var b2 = new T.Mesh(new T.BoxGeometry(bw, bh, bd), new T.MeshLambertMaterial({ color: cols[k % cols.length], map: t2 })); b2.position.set(bx, bh / 2, bz); scene.add(b2);
+  }
+})();
+
+// ------------------------------------------------------------------ ガントリークレーン（v2.4：構造物は奥側・上部だけ）
+// レールは駐車場の奥で、画面の左右方向に駐車場の左端から右端まで（両端の外まで）伸びる。脚・梁は奥のレール上にだけ立つ。
+// 画面の手前側（駐車場の上・手前）には脚もレールも梁も置かない（v2.3 までの半透過の前面表示は廃止）。
+// トロリーと巻き上げ装置は上部にあり、ケーブルと爪でトロリー位置（前後）とブリッジ位置（左右）が読める。
+var crane3 = (function () {
+  var yel = mat(0xf5b81c), dark = mat(0x2d3036), steel = mat(0x9aa1a8), conc = mat(0x9b958a);
+  var top = L.CRANE.topY, rz = Yd.zMin - 4, rx0 = Yd.xMin - 6, rx1 = Yd.xMax + 6, gauge = 0.7;
+  // 奥のレール：コンクリートの基礎の上に2本の鋼レール。左右両端に車止め（黄黒）
+  var bed = box(rx1 - rx0 + 1, 0.16, 2.6, conc); bed.position.set((rx0 + rx1) / 2, 0.08, rz); bed.castShadow = false; scene.add(bed);
+  [-gauge, gauge].forEach(function (dz) { var r = box(rx1 - rx0, 0.18, 0.22, steel); r.position.set((rx0 + rx1) / 2, 0.25, rz + dz); scene.add(r); });
+  var stopTex = canvasTex(64, 64, function (g, w, h) { g.fillStyle = '#ffcf1a'; g.fillRect(0, 0, w, h); g.fillStyle = '#1a1a1a'; for (var i = -64; i < 128; i += 22) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 11, 0); g.lineTo(i + 11 - 64, 64); g.lineTo(i - 64, 64); g.fill(); } });
+  [rx0, rx1].forEach(function (x) { var st = box(0.6, 1.0, 2.2, new T.MeshLambertMaterial({ map: stopTex })); st.position.set(x + (x < 0 ? -0.3 : 0.3), 0.5, rz); scene.add(st); });
+  var bridge = new T.Group(); scene.add(bridge);
+  // 走行台車（レールの上を左右に走る）＋ A 字の脚＋下の横つなぎ＋上の頭部（看板）
+  var spread = 5, legTop = 1.0, hgt = top + 0.6;
+  [-1, 1].forEach(function (sx) {
+    var tr = box(2.6, 0.8, 2.2, yel); tr.position.set(sx * spread, 0.8, rz); bridge.add(tr);
+    for (var w = -1; w <= 1; w += 2) for (var dz = -1; dz <= 1; dz += 2) { var wh = new T.Mesh(new T.CylinderGeometry(0.34, 0.34, 0.3, 14), dark); wh.rotation.x = Math.PI / 2; wh.position.set(sx * spread + w * 0.85, 0.5, rz + dz * gauge); bridge.add(wh); }
+    var dx = spread - legTop, len = Math.hypot(hgt, dx), leg = box(0.5, len, 0.5, yel);
+    leg.position.set(sx * (spread + legTop) / 2, 1.2 + hgt / 2 - 0.6, rz); leg.rotation.z = sx * Math.atan2(dx, hgt); bridge.add(leg);
+  });
+  var sill = box(spread * 2, 0.34, 0.34, yel); sill.position.set(0, 1.25, rz); bridge.add(sill);
+  var head = box(3.2, 1.6, 1.4, yel); head.position.set(0, top + 1.15, rz); bridge.add(head);
+  var signTex = canvasTex(512, 96, function (g, w, h) { g.fillStyle = '#1d1f24'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffcf1a'; g.font = '900 60px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('PARKING CRANE', w / 2, h / 2 + 2); });
+  var sign = new T.Mesh(new T.PlaneGeometry(6.4, 1.2), new T.MeshLambertMaterial({ map: signTex })); sign.position.set(0, top + 1.15, rz + 0.72); bridge.add(sign);
+  var signBack = box(6.6, 1.36, 0.06, dark); signBack.position.set(0, top + 1.15, rz + 0.68); bridge.add(signBack);
+  // トロリー（上部）：巻き上げドラムと赤ランプ。駐車場の上には梁を描かない
+  var trolley = new T.Group(); bridge.add(trolley);
+  // 真上から見下ろすカメラで奥の列の車を隠さないよう、トロリーは小ぶりに（ケーブルの付け根＝topY+0.6 のすぐ上）
+  var tb = box(1.3, 0.5, 0.9, mat(0xe3e6ea)); tb.position.y = top + 1.25; trolley.add(tb);
+  var tbBand = box(1.34, 0.12, 0.94, yel); tbBand.position.y = top + 0.98; trolley.add(tbBand);
+  var drum = new T.Mesh(new T.CylinderGeometry(0.22, 0.22, 0.9, 14), dark); drum.rotation.z = Math.PI / 2; drum.position.y = top + 0.7; trolley.add(drum);
+  var lampM = new T.MeshLambertMaterial({ color: 0xff3b1f, emissive: 0xff2a10, emissiveIntensity: 0.4 });
+  var lamp = new T.Mesh(new T.SphereGeometry(0.14, 12, 8), lampM); lamp.position.set(0, top + 1.6, 0); trolley.add(lamp);
+  return { bridge: bridge, trolley: trolley, lamp: lamp, railZ: rz };
+})();
+var cableMesh = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, 1, 6), mat(0x222428));
+cableMesh.castShadow = true; scene.add(cableMesh);
+var cable2 = cableMesh.clone(); scene.add(cable2);
+
+// ------------------------------------------------------------------ 爪（左右に2本ずつ、計4本。車の幅方向に開閉）
+var Claw = (function () {
+  var group = new T.Group(); scene.add(group);
+  var yel = mat(0xf2b01e), dark = mat(0x34373d), red = mat(0xd8321b);
+  var hookTex = canvasTex(64, 64, function (g, w, h) { g.fillStyle = '#ffcf1a'; g.fillRect(0, 0, w, h); g.fillStyle = '#1a1a1a'; for (var i = -64; i < 128; i += 16) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 8, 0); g.lineTo(i + 8 - 64, 64); g.lineTo(i - 64, 64); g.fill(); } });
+  var scaleG = new T.Group(); group.add(scaleG);
+  var block = box(0.8, 0.6, 0.55, new T.MeshLambertMaterial({ map: hookTex })); block.position.y = -0.3; scaleG.add(block);
+  var hub = box(1.2, 0.42, 1.0, dark); hub.position.y = -0.89; scaleG.add(hub);
+  var ring = box(1.26, 0.08, 1.06, red); ring.position.y = -0.66; scaleG.add(ring);
+  var pad = box(1.0, 0.06, 0.8, mat(0x1b1c1f)); pad.position.y = -1.08; scaleG.add(pad);
+  var fingers = [], KNEE = 34 * DEG, A0 = 0.9, B0 = 0.8;
+  var POS = [[0, -1], [0, 1], [Math.PI, -1], [Math.PI, 1]]; // [向き, 前後]
+  for (var i = 0; i < 4; i++) {
+    var yawG = new T.Group(); yawG.rotation.y = -POS[i][0]; group.add(yawG);
+    var piv = new T.Group(); yawG.add(piv);
+    var upper = box(0.2, 1, 0.26, yel); piv.add(upper);
+    var knee = new T.Group(); piv.add(knee);
+    var lower = box(0.18, 1, 0.24, yel); knee.add(lower);
+    var tip = new T.Mesh(new T.BoxGeometry(0.34, 0.16, 0.3), dark); tip.castShadow = true; knee.add(tip);
+    var joint = new T.Mesh(new T.SphereGeometry(0.15, 10, 8), dark); knee.add(joint);
+    fingers.push({ yawG: yawG, piv: piv, upper: upper, knee: knee, lower: lower, tip: tip, joint: joint });
+  }
+  var cfg = { s: 1, fs: 1, r0: 0.45, open: 50 * DEG, closed: 10 * DEG };
+  function tipR(al) { return cfg.r0 + cfg.fs * (A0 * Math.sin(al) + B0 * Math.sin(al - KNEE)); }
+  function tipD(al) { return cfg.fs * (A0 * Math.cos(al) + B0 * Math.cos(al - KNEE)); }
+  /** 車種に合わせて：開いた指先が logic の clawReach / fingerDepth に来るよう、指の長さと開き角を解く */
+  function configure(p) {
+    var s = p ? L.clawScale(p) : 1;
+    cfg.s = s; cfg.r0 = 0.45 * s; scaleG.scale.setScalar(s);
+    var reach = p ? L.clawReach(p) : 1.3, depth = (p ? L.fingerDepth(p) : 0.8) + 0.1 * s;
+    var ratio = (reach - cfg.r0) / depth, f = function (al) { return (A0 * Math.sin(al) + B0 * Math.sin(al - KNEE)) / (A0 * Math.cos(al) + B0 * Math.cos(al - KNEE)); };
+    var lo = -10 * DEG, hi = 85 * DEG;
+    for (var k = 0; k < 40; k++) { var m = (lo + hi) / 2; if (f(m) < ratio) lo = m; else hi = m; }
+    cfg.open = (lo + hi) / 2; cfg.fs = depth / (A0 * Math.cos(cfg.open) + B0 * Math.cos(cfg.open - KNEE));
+    var rt = p ? p.W / 2 + 0.1 : cfg.r0 + 0.1; lo = -40 * DEG; hi = cfg.open;
+    for (var k2 = 0; k2 < 40; k2++) { var m2 = (lo + hi) / 2; if (tipR(m2) < rt) lo = m2; else hi = m2; }
+    cfg.closed = (lo + hi) / 2;
+    var fz = p ? L.fingerZ(p) : 0.42;
+    for (var i = 0; i < 4; i++) {
+      var fg = fingers[i], a = A0 * cfg.fs, b = B0 * cfg.fs;
+      fg.yawG.position.set(Math.cos(POS[i][0]) * cfg.r0, -1.0 * s, POS[i][1] * fz);
+      fg.upper.scale.set(1, a, 1); fg.upper.position.y = -a / 2;
+      fg.knee.position.y = -a; fg.knee.rotation.z = -KNEE;
+      fg.lower.scale.set(1, b, 1); fg.lower.position.y = -b / 2;
+      fg.tip.position.set(-0.08, -b, 0);
+    }
+  }
+  function setClose(t) { var al = cfg.open + (cfg.closed - cfg.open) * t; for (var i = 0; i < 4; i++) fingers[i].piv.rotation.z = al; }
+  configure(null); setClose(0);
+  return { group: group, configure: configure, setClose: setClose, cfg: cfg, tipR: tipR, tipD: tipD };
+})();
+
+// 照準：レーザー、地面の十字、4本の指先の着地点（隣の車にかかると赤）
+var laser = new T.Mesh(new T.CylinderGeometry(0.03, 0.03, 1, 6), new T.MeshBasicMaterial({ color: 0xff3020, transparent: true, opacity: 0.55, depthWrite: false }));
+scene.add(laser);
+var aimTex = canvasTex(128, 128, function (g) {
+  g.strokeStyle = '#ff2a14'; g.lineWidth = 7; g.beginPath(); g.arc(64, 64, 40, 0, Math.PI * 2); g.stroke();
+  g.lineWidth = 5; g.beginPath(); g.moveTo(64, 8); g.lineTo(64, 40); g.moveTo(64, 88); g.lineTo(64, 120); g.moveTo(8, 64); g.lineTo(40, 64); g.moveTo(88, 64); g.lineTo(120, 64); g.stroke();
+});
+var aim = new T.Mesh(new T.PlaneGeometry(1.1, 1.1), new T.MeshBasicMaterial({ map: aimTex, transparent: true, depthWrite: false, depthTest: false }));
+aim.rotation.x = -Math.PI / 2; aim.renderOrder = 5; scene.add(aim);
+var tipTex = canvasTex(64, 64, function (g) { g.fillStyle = '#fff'; g.beginPath(); g.arc(32, 32, 22, 0, Math.PI * 2); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 6; g.stroke(); });
+var tipMarks = [];
+for (var tm = 0; tm < 4; tm++) { var mk = new T.Mesh(new T.PlaneGeometry(0.34, 0.34), new T.MeshBasicMaterial({ map: tipTex, transparent: true, depthWrite: false, depthTest: false })); mk.rotation.x = -Math.PI / 2; mk.renderOrder = 6; scene.add(mk); tipMarks.push(mk); }
+
+// ------------------------------------------------------------------ 車のモデル（v2.3：前後と車種が一目で分かる造形）
+// ロジックの寸法（L/W/H/lowTop/cabL/cabX・重心・当たり判定）は一切変えず、見た目だけを足す。
+// 横から見た形（前＝+x、上＝+y）を車種ごとに折れ線で持ち、ExtrudeGeometry で押し出す。窓・ドア・ホイールアーチは Canvas テクスチャ、
+// ライト・グリル・バンパー・ナンバー・ミラー・ホイールはプリミティブ。テクスチャ・ジオメトリ・共通マテリアルは車種と色でキャッシュする。
+var CAR_LOOK = {
+  // nose：前面の上端の高さ／hf：ボンネット先端 [x,y]／cowl：フロントガラスの付け根 x／cabin：キャビンの折れ線（ガラス付け根→屋根前→屋根後→…→後ろの付け根）
+  // tail：後端の上端の高さ／doors：ドアの前後端 x（片側）／pil：窓を区切るピラー x／hl・tl：ライトの形／bumper：'trim'（樹脂）か 'body'（車体色）
+  kei:     { nose: 0.70, hf: [1.60, 0.76], cowl: 0.95, cabin: [[0.95, 0.84], [0.40, 1.64], [-1.50, 1.64], [-1.62, 0.84]], tail: 0.82,
+             doors: [[0.92, -0.40], [-0.40, -1.22]], pil: [[-0.40, 0.09], [-1.22, 0.10]], hl: { w: 0.26, h: 0.15, round: true }, tl: { w: 0.15, h: 0.36 }, bumper: 'trim', grille: 'slot', wheel: 'steel' },
+  compact: { nose: 0.64, hf: [1.86, 0.71], cowl: 1.00, cabin: [[1.00, 0.82], [0.28, 1.52], [-1.38, 1.52], [-1.84, 1.00], [-1.90, 0.82]], tail: 0.80,
+             doors: [[0.96, -0.36], [-0.36, -1.20]], pil: [[-0.36, 0.09], [-1.24, 0.16]], hl: { w: 0.32, h: 0.13 }, tl: { w: 0.24, h: 0.22 }, bumper: 'trim', grille: 'mesh', wheel: 'eight' },
+  sedan:   { nose: 0.63, hf: [2.22, 0.70], cowl: 1.18, cabin: [[1.18, 0.82], [0.40, 1.45], [-0.95, 1.45], [-1.55, 0.83]], tail: 0.80,
+             doors: [[1.12, -0.30], [-0.30, -1.32]], pil: [[-0.30, 0.09]], hl: { w: 0.36, h: 0.12 }, tl: { w: 0.44, h: 0.13, bar: true }, bumper: 'body', grille: 'chrome', wheel: 'ten' },
+  wagon:   { nose: 0.66, hf: [2.25, 0.72], cowl: 1.16, cabin: [[1.16, 0.84], [0.40, 1.56], [-2.24, 1.56], [-2.33, 0.84]], tail: 0.82,
+             doors: [[1.10, -0.30], [-0.30, -1.32]], pil: [[-0.30, 0.09], [-1.32, 0.10]], hl: { w: 0.34, h: 0.13 }, tl: { w: 0.15, h: 0.30, pillar: true }, bumper: 'trim', grille: 'mesh', wheel: 'five', rails: true },
+  open:    { nose: 0.68, hf: [1.86, 0.75], cowl: 0.55, cabin: null, tail: 0.84, ws: [[0.56, 0.86], [0.22, 1.22]],
+             doors: [[0.50, -0.56]], pil: [], hl: { w: 0.24, h: 0.16, round: true }, tl: { round: 0.075, n: 1 }, bumper: 'body', grille: 'oval', wheel: 'wire' },
+  sports:  { nose: 0.50, hf: [2.12, 0.56], cowl: 1.05, cabin: [[1.05, 0.72], [0.15, 1.18], [-0.70, 1.18], [-1.88, 0.76], [-2.0, 0.74]], tail: 0.74,
+             doors: [[0.98, -0.62]], pil: [], hl: { w: 0.40, h: 0.08 }, tl: { round: 0.07, n: 2 }, bumper: 'body', grille: 'intake', wheel: 'sport', wing: true, scoop: true }
+};
+var _carCache = {};
+function cached(key, make) { return _carCache[key] || (_carCache[key] = make()); }
+function bgeo(w, h, d) { return cached('b' + w.toFixed(3) + ',' + h.toFixed(3) + ',' + d.toFixed(3), function () { return new T.BoxGeometry(w, h, d); }); }
+function bmesh(w, h, d, m, shadow) { var me = new T.Mesh(bgeo(w, h, d), m); me.castShadow = !!shadow; me.receiveShadow = !!shadow; return me; }
+// 折れ線 pts を y で引いた x（y が範囲外なら端の値）
+function xAtY(pts, y) {
+  for (var i = 0; i < pts.length - 1; i++) {
+    var a = pts[i], b = pts[i + 1], lo = Math.min(a[1], b[1]), hi = Math.max(a[1], b[1]);
+    if (y >= lo - 1e-6 && y <= hi + 1e-6 && hi - lo > 1e-6) return a[0] + (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]);
+  }
+  return Math.abs(y - pts[0][1]) < Math.abs(y - pts[pts.length - 1][1]) ? pts[0][0] : pts[pts.length - 1][0];
+}
+function extrude(pts, depth) {
+  var sh = new T.Shape(); sh.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i++) sh.lineTo(pts[i][0], pts[i][1]); sh.closePath();
+  var g = new T.ExtrudeGeometry(sh, { depth: depth, bevelEnabled: false, curveSegments: 4 }); g.translate(0, 0, -depth / 2); return g;
+}
+// 共通マテリアル（爆発した車だけ複製してから黒焦げにする → isolateMaterials）
+var CM = {
+  trim: mat(0x26292e), black: mat(0x111214), chrome: mat(0xd8dce2, { emissive: 0x30343a }), tyre: mat(0x1a1b1e),
+  head: mat(0xffffff, { emissive: 0xfff1c8, emissiveIntensity: 0.25, map: canvasTex(96, 48, function (c, w, h) {
+    c.fillStyle = '#3a3f46'; c.fillRect(0, 0, w, h);
+    var g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#b9c6d4'); c.fillStyle = g; c.beginPath(); c.roundRect(4, 4, w - 8, h - 8, 8); c.fill();
+    [w * 0.33, w * 0.68].forEach(function (x) { c.fillStyle = '#e9eef4'; c.beginPath(); c.arc(x, h / 2, h * 0.3, 0, Math.PI * 2); c.fill(); c.strokeStyle = '#8c98a6'; c.lineWidth = 3; c.stroke(); c.fillStyle = '#fffbe8'; c.beginPath(); c.arc(x, h / 2, h * 0.13, 0, Math.PI * 2); c.fill(); });
+  }) }), headR: mat(0xf6f8ff, { emissive: 0xfff1c8, emissiveIntensity: 0.5 }), amber: mat(0xffa21a, { emissive: 0xc06000, emissiveIntensity: 0.5 }),
+  tail: mat(0xffffff, { emissive: 0x900606, emissiveIntensity: 0.5, map: canvasTex(64, 64, function (c, w, h) {
+    c.fillStyle = '#5a0606'; c.fillRect(0, 0, w, h); var g = c.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#ff4a3a'); g.addColorStop(1, '#c00c0c'); c.fillStyle = g; c.fillRect(4, 4, w - 8, h - 8);
+    c.fillStyle = 'rgba(255,255,255,.18)'; for (var y = 10; y < h - 6; y += 12) c.fillRect(6, y, w - 12, 3);
+  }) }), refl: mat(0xb01010, { emissive: 0x500000 }),
+  seat: mat(0x8a4a2a), cockpit: mat(0x231c18), wsGlass: mat(0xc4dcec, { transparent: true, opacity: 0.42, depthWrite: false })
+};
+CM.glass = mat(0xffffff, { map: canvasTex(128, 128, function (c, w, h) {
+  var gr = c.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#3b5468'); gr.addColorStop(0.55, '#1b2733'); gr.addColorStop(1, '#121a22'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+  c.fillStyle = 'rgba(255,255,255,.22)'; c.beginPath(); c.moveTo(w * 0.18, 0); c.lineTo(w * 0.42, 0); c.lineTo(w * 0.22, h); c.lineTo(0, h); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.12)'; c.beginPath(); c.moveTo(w * 0.52, 0); c.lineTo(w * 0.6, 0); c.lineTo(w * 0.42, h); c.lineTo(w * 0.34, h); c.fill();
+  c.strokeStyle = '#0b0d10'; c.lineWidth = 10; c.strokeRect(0, 0, w, h);
+}) });
+function grilleMat(kind) {
+  return cached('grille' + kind, function () {
+    return mat(0xffffff, { map: canvasTex(128, 48, function (c, w, h) {
+      c.fillStyle = '#16181b'; c.fillRect(0, 0, w, h);
+      if (kind === 'mesh' || kind === 'intake') { c.strokeStyle = '#3c4148'; c.lineWidth = 2; for (var i = -h; i < w; i += 9) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i + h, h); c.stroke(); c.beginPath(); c.moveTo(i + h, 0); c.lineTo(i, h); c.stroke(); } }
+      else { c.fillStyle = kind === 'chrome' ? '#c9ced6' : '#454a52'; for (var y = 6; y < h - 4; y += 8) c.fillRect(4, y, w - 8, 3); }
+      if (kind === 'chrome') { c.strokeStyle = '#e6eaef'; c.lineWidth = 5; c.strokeRect(2.5, 2.5, w - 5, h - 5); c.fillStyle = '#e6eaef'; c.beginPath(); c.arc(w / 2, h / 2, 7, 0, Math.PI * 2); c.fill(); }
+    }) });
+  });
+}
+function wheelMat(kind) {
+  return cached('wheel' + kind, function () {
+    return mat(0xffffff, { map: canvasTex(128, 128, function (c, w, h) {
+      var cx = w / 2, cy = h / 2, R = w / 2 - 1, i, a;
+      var dark = kind === 'sport', face = dark ? '#3a3d42' : kind === 'steel' ? '#9ea3aa' : '#cfd3d8', hole = '#141518';
+      c.fillStyle = '#1a1b1e'; c.fillRect(0, 0, w, h);
+      c.fillStyle = face; c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = dark ? '#5a5e66' : '#eef0f3'; c.lineWidth = 4; c.beginPath(); c.arc(cx, cy, R - 3, 0, Math.PI * 2); c.stroke(); // リム
+      c.fillStyle = hole;
+      if (kind === 'steel') { // 鉄ちん＋ホイールキャップ
+        for (i = 0; i < 8; i++) { a = i / 8 * Math.PI * 2; c.beginPath(); c.ellipse(cx + Math.cos(a) * R * 0.66, cy + Math.sin(a) * R * 0.66, 7, 4, a, 0, Math.PI * 2); c.fill(); }
+        c.fillStyle = '#e4e7eb'; c.beginPath(); c.arc(cx, cy, R * 0.48, 0, Math.PI * 2); c.fill(); c.strokeStyle = '#8a9098'; c.lineWidth = 3; c.stroke();
+      } else if (kind === 'wire') { // メッシュ／ワイヤー
+        c.strokeStyle = '#7a8088'; c.lineWidth = 2; for (i = 0; i < 24; i++) { a = i / 24 * Math.PI * 2; c.beginPath(); c.moveTo(cx + Math.cos(a) * R * 0.2, cy + Math.sin(a) * R * 0.2); c.lineTo(cx + Math.cos(a + 0.5) * R * 0.86, cy + Math.sin(a + 0.5) * R * 0.86); c.stroke(); }
+      } else { // スポーク（5／8／10本、スポーツは Y スポーク＋赤いキャリパー）
+        var n = kind === 'five' ? 5 : kind === 'eight' ? 8 : kind === 'ten' ? 10 : 5, sw = kind === 'ten' ? 0.13 : kind === 'eight' ? 0.17 : 0.3;
+        if (dark) { c.fillStyle = '#c8261a'; c.fillRect(cx + R * 0.25, cy - R * 0.55, R * 0.22, R * 0.5); c.fillStyle = hole; }
+        for (i = 0; i < n; i++) {
+          a = i / n * Math.PI * 2 + Math.PI / n; var a0 = a - Math.PI / n + sw, a1 = a + Math.PI / n - sw;
+          c.beginPath(); c.moveTo(cx + Math.cos(a0) * R * 0.3, cy + Math.sin(a0) * R * 0.3); c.arc(cx, cy, R * 0.86, a0, a1); c.lineTo(cx + Math.cos(a1) * R * 0.3, cy + Math.sin(a1) * R * 0.3); c.closePath(); c.fill();
+        }
+        if (dark) { c.fillStyle = '#c8261a'; c.globalAlpha = 0.9; c.fillRect(cx + R * 0.3, cy - R * 0.5, R * 0.14, R * 0.4); c.globalAlpha = 1; }
+        c.fillStyle = dark ? '#6a6e76' : '#e9ecef'; c.beginPath(); c.arc(cx, cy, R * 0.22, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#2a2d33'; for (i = 0; i < 5; i++) { a = i / 5 * Math.PI * 2; c.beginPath(); c.arc(cx + Math.cos(a) * R * 0.13, cy + Math.sin(a) * R * 0.13, 2.2, 0, Math.PI * 2); c.fill(); }
+      }
+    }) });
+  });
+}
+var tyreFaceM = mat(0xffffff, { map: canvasTex(64, 64, function (c, w, h) { c.fillStyle = '#1a1b1e'; c.fillRect(0, 0, w, h); c.strokeStyle = '#2c2e33'; c.lineWidth = 2; c.beginPath(); c.arc(w / 2, h / 2, w * 0.4, 0, Math.PI * 2); c.stroke(); }) });
+function plateMat(car) {
+  return cached('plate' + car.type.id + car.id, function () { return new T.MeshBasicMaterial({ map: canvasTex(128, 64, function (c, w, h) {
+    c.fillStyle = car.type.id === 'kei' ? '#f4d640' : '#fff'; c.fillRect(0, 0, w, h);
+    c.strokeStyle = car.type.id === 'kei' ? '#222' : '#2a7a3a'; c.lineWidth = 5; c.strokeRect(3, 3, w - 6, h - 6);
+    c.fillStyle = car.type.id === 'kei' ? '#222' : '#2a7a3a'; c.textAlign = 'center';
+    c.font = '700 13px sans-serif'; c.fillText('ちゅうしゃ ' + (300 + car.id * 7 % 600), w / 2, 20);
+    c.font = '900 30px sans-serif'; c.fillText(String(10 + car.id * 7 % 89) + '-' + String(20 + car.id * 3 % 79), w / 2, 52);
+  }) }); });
+}
+// 下半分（ボディ）の横顔テクスチャ：ホイールアーチ・ドアの切れ目・ドアハンドル・プレスライン・サイドマーカー
+function lowSideTex(p, look, colS, r, wx) {
+  var Lh = p.L, y0 = 0.2, top = p.lowTop + 0.02, hh = top - y0;
+  var t = canvasTex(512, 128, function (c, w, h) {
+    var X = function (x) { return (x / Lh + 0.5) * w; }, Y = function (y) { return (1 - (y - y0) / hh) * h; }, S = w / Lh;
+    c.fillStyle = colS; c.fillRect(0, 0, w, h);
+    var gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,255,255,.18)'); gr.addColorStop(0.45, 'rgba(255,255,255,0)'); gr.addColorStop(0.75, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.35)'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(20,22,26,.85)'; c.fillRect(0, Y(y0 + 0.05), w, h); // サイドシル
+    c.strokeStyle = 'rgba(255,255,255,.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(X(-Lh / 2 + 0.2), Y(p.lowTop - 0.17)); c.lineTo(X(Lh / 2 - 0.25), Y(p.lowTop - 0.15)); c.stroke(); // プレスライン
+    c.strokeStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.moveTo(X(-Lh / 2 + 0.2), Y(p.lowTop - 0.19)); c.lineTo(X(Lh / 2 - 0.25), Y(p.lowTop - 0.17)); c.stroke();
+    // ドアの切れ目とハンドル
+    c.strokeStyle = 'rgba(10,12,14,.8)'; c.lineWidth = 2.5;
+    look.doors.forEach(function (d) {
+      c.beginPath(); c.moveTo(X(d[0]), Y(top)); c.lineTo(X(d[0] - 0.04), Y(y0 + 0.08)); c.lineTo(X(d[1]), Y(y0 + 0.08)); c.lineTo(X(d[1]), Y(top)); c.stroke();
+      var hx = X(d[1] + 0.14), hy = Y(p.lowTop - 0.1);
+      c.fillStyle = 'rgba(15,16,18,.85)'; c.beginPath(); c.roundRect(hx - 0.02 * S, hy - 3, 0.17 * S, 7, 3); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.7)'; c.fillRect(hx - 0.01 * S, hy - 3, 0.15 * S, 2);
+    });
+    if (look.scoop) { c.fillStyle = '#121316'; c.beginPath(); c.moveTo(X(-0.66), Y(p.lowTop - 0.08)); c.lineTo(X(-1.12), Y(p.lowTop - 0.14)); c.lineTo(X(-1.12), Y(y0 + 0.2)); c.lineTo(X(-0.7), Y(y0 + 0.22)); c.closePath(); c.fill(); }
+    // 給油口
+    c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 2; c.beginPath(); c.arc(X(-Lh / 2 + 0.55), Y(p.lowTop - 0.12), 0.07 * S, 0, Math.PI * 2); c.stroke();
+    // サイドマーカー（前＝橙、後＝赤）
+    c.fillStyle = '#ff9a1a'; c.fillRect(X(Lh / 2 - 0.26), Y(look.nose - 0.08), 0.12 * S, 6);
+    c.fillStyle = '#c81818'; c.fillRect(X(-Lh / 2 + 0.1), Y(look.tail - 0.1), 0.12 * S, 6);
+    // ホイールアーチ（タイヤの上の黒い半円と、縁取り）
+    wx.forEach(function (x) {
+      c.fillStyle = '#0f1012'; c.beginPath(); c.arc(X(x), Y(r), (r + 0.06) * S, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = 'rgba(0,0,0,.4)'; c.lineWidth = 4; c.beginPath(); c.arc(X(x), Y(r), (r + 0.09) * S, Math.PI * 1.05, Math.PI * 1.95); c.stroke();
+    });
+  });
+  t.repeat.set(1 / Lh, 1 / hh); t.offset.set(0.5, -y0 / hh); return t;
+}
+// キャビンの横顔テクスチャ：ピラーで区切った窓と、窓枠（モール）
+function cabSideTex(p, look, colS) {
+  var Lh = p.L, yb = p.lowTop - 0.02, hh = p.H + 0.02 - yb, cab = look.cabin;
+  var front = [cab[0], cab[1]], rear = cab.slice(2);
+  var t = canvasTex(512, 128, function (c, w, h) {
+    var X = function (x) { return (x / Lh + 0.5) * w; }, Y = function (y) { return (1 - (y - yb) / hh) * h; }, S = w / Lh;
+    c.fillStyle = colS; c.fillRect(0, 0, w, h);
+    var gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,255,255,.2)'); gr.addColorStop(1, 'rgba(0,0,0,.08)'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+    var yt = p.H - 0.075, ybw = p.lowTop + 0.07, steps = [], i, y;
+    for (i = 0; i <= 6; i++) { y = ybw + (yt - ybw) * i / 6; steps.push([xAtY(front, y) - 0.09, y]); }
+    for (i = 6; i >= 0; i--) { y = ybw + (yt - ybw) * i / 6; steps.push([xAtY(rear, y) + 0.09, y]); }
+    c.beginPath(); steps.forEach(function (q, k) { if (k) c.lineTo(X(q[0]), Y(q[1])); else c.moveTo(X(q[0]), Y(q[1])); }); c.closePath();
+    var g2 = c.createLinearGradient(0, Y(yt), 0, Y(ybw)); g2.addColorStop(0, '#3a5266'); g2.addColorStop(1, '#141c24'); c.fillStyle = g2; c.fill();
+    c.strokeStyle = '#0c0d0f'; c.lineWidth = 4; c.stroke();
+    c.save(); c.clip(); c.fillStyle = 'rgba(255,255,255,.2)';
+    for (i = 0; i < 3; i++) { var x0 = X(cab[1][0] - 0.3 - i * 1.05); c.beginPath(); c.moveTo(x0, 0); c.lineTo(x0 + 0.22 * S, 0); c.lineTo(x0 - 0.12 * S, h); c.lineTo(x0 - 0.34 * S, h); c.fill(); }
+    c.restore();
+    // ピラー（車体色、少し後傾）
+    look.pil.forEach(function (q) {
+      var x = q[0], hw = q[1] / 2; c.fillStyle = colS; c.beginPath(); c.moveTo(X(x - hw), Y(ybw - 0.02)); c.lineTo(X(x + hw), Y(ybw - 0.02)); c.lineTo(X(x + hw - 0.05), Y(yt + 0.02)); c.lineTo(X(x - hw - 0.05), Y(yt + 0.02)); c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 2; c.stroke();
+    });
+    // ドアの切れ目は窓枠の下まで続ける
+    c.strokeStyle = 'rgba(10,12,14,.8)'; c.lineWidth = 2.5;
+    look.doors.forEach(function (d) { [d[0], d[1]].forEach(function (x) { if (x < xAtY(front, ybw) - 0.05 && x > xAtY(rear, ybw) + 0.05) { c.beginPath(); c.moveTo(X(x), Y(yb)); c.lineTo(X(x), Y(ybw)); c.stroke(); } }); });
+  });
+  t.repeat.set(1 / Lh, 1 / hh); t.offset.set(0.5, -yb / hh); return t;
+}
+// 斜面（a→b）にぴったり乗る薄い板（フロントガラス・リアガラス・ボンネット用）
+function slab(a, b, width, th, m, out, inset) {
+  var dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy), ins = inset || 0;
+  var me = new T.Mesh(bgeo(Math.max(0.05, len - ins * 2), th, width), m), ang = Math.atan2(dy, dx), nx = -Math.sin(ang), ny = Math.cos(ang);
+  if (nx * out[0] + ny * out[1] < 0) { nx = -nx; ny = -ny; }
+  me.position.set((a[0] + b[0]) / 2 + nx * th / 2, (a[1] + b[1]) / 2 + ny * th / 2, 0); me.rotation.z = ang; return me;
+}
+
+// 描画負荷対策：車体に直接付いた小物（ライト・グリル・ナンバー・マフラー等。爆発で外れない物）を、マテリアルごとに1つのメッシュへまとめる
+function mergeDetails(body) {
+  var groups = new Map(), keep = [];
+  body.children.slice().forEach(function (o) {
+    if (!o.isMesh || o.userData.part || o.children.length || Array.isArray(o.material)) return;
+    if (!groups.has(o.material)) groups.set(o.material, []); groups.get(o.material).push(o);
+  });
+  groups.forEach(function (list, m) {
+    if (list.length < 2) return;
+    var pos = [], nor = [], uv = [];
+    list.forEach(function (o) {
+      o.updateMatrix(); var g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); g.applyMatrix4(o.matrix);
+      pos.push(g.attributes.position.array); nor.push(g.attributes.normal.array); uv.push(g.attributes.uv ? g.attributes.uv.array : new Float32Array(g.attributes.position.count * 2));
+      g.dispose(); body.remove(o);
+    });
+    var cat = function (arrs) { var n = arrs.reduce(function (a, x) { return a + x.length; }, 0), out = new Float32Array(n), k = 0; arrs.forEach(function (x) { out.set(x, k); k += x.length; }); return out; };
+    var mg = new T.BufferGeometry(); mg.setAttribute('position', new T.BufferAttribute(cat(pos), 3)); mg.setAttribute('normal', new T.BufferAttribute(cat(nor), 3)); mg.setAttribute('uv', new T.BufferAttribute(cat(uv), 2));
+    var me = new T.Mesh(mg, m); me.userData.merged = list.length; body.add(me);
+  });
+}
+function carModel(car) {
+  var p = car.type, color = car.color, g = new T.Group(), body = new T.Group(); g.add(body);
+  var Lh = p.L, Wd = p.W, L2 = Lh / 2, kind = p.id, look = CAR_LOOK[kind], r = kind === 'kei' ? 0.28 : kind === 'sports' ? 0.33 : 0.32;
+  var y0 = 0.2, colS = hex(color), key = kind + colS, cabW = Wd * 0.86;
+  var bodyM = mat(color), mats = [bodyM];
+  var wx = [L2 - r - 0.3, -(L2 - r - 0.3)];
+  // ---- ボディ（下半分）：横から見た形を押し出す
+  var hf = look.hf, prof = [[-L2 + 0.06, y0], [L2 - 0.1, y0], [L2, y0 + 0.12], [L2, look.nose], [hf[0], hf[1]], [look.cowl, p.lowTop],
+    [-L2 + 0.05, p.lowTop], [-L2, look.tail], [-L2, y0 + 0.12]];
+  var lowGeo = cached('low' + kind, function () { return extrude(prof, Wd); });
+  var sideM = mat(0xffffff, { map: cached('lt' + key, function () { return lowSideTex(p, look, colS, r, wx); }) }); mats.push(sideM);
+  var low = new T.Mesh(lowGeo, [sideM, bodyM]); low.castShadow = low.receiveShadow = true; low.userData.part = 'low'; body.add(low);
+  // ---- キャビン（屋根）：ガラスの傾斜・ピラー・窓枠。爆発で丸ごと飛ぶ（'roof'）
+  var cab = null, wing = null;
+  if (look.cabin) {
+    var cb = look.cabin, cabGeo = cached('cab' + kind, function () { var q = cb.slice(); q[0] = [cb[0][0], p.lowTop - 0.01]; q[q.length - 1] = [cb[cb.length - 1][0], p.lowTop - 0.01]; return extrude(q, cabW); });
+    var cSideM = mat(0xffffff, { map: cached('ct' + key, function () { return cabSideTex(p, look, colS); }) }); mats.push(cSideM);
+    cab = new T.Mesh(cabGeo, [cSideM, bodyM]); cab.castShadow = cab.receiveShadow = true; cab.userData.part = 'roof'; body.add(cab);
+    cab.add(slab(cb[0], cb[1], cabW - 0.1, 0.02, CM.glass, [1, 0.3], 0.05));                 // フロントガラス（大きく寝ている）
+    for (var ri = 2; ri < cb.length - 1; ri++) {                                              // リアガラス（ワゴン・軽は立っている）
+      var a = cb[ri], b2 = cb[ri + 1]; if (b2[1] < p.lowTop + 0.2 && ri + 1 === cb.length - 1 && cb.length > 4) continue;
+      if (Math.abs(b2[0] - a[0]) < 0.3 * Math.abs(b2[1] - a[1])) b2 = [a[0] + (b2[0] - a[0]) * 0.52, a[1] + (b2[1] - a[1]) * 0.52]; // 立ったテールゲートは上半分だけガラス
+      cab.add(slab(a, b2, cabW - 0.12, 0.02, CM.glass, [-1, 0.3], ri === 2 ? 0.06 : 0.02));
+    }
+    if (look.rails) [-1, 1].forEach(function (s) { var rl = bmesh(cb[1][0] - cb[2][0] - 0.3, 0.05, 0.05, CM.trim); rl.position.set((cb[1][0] + cb[2][0]) / 2 - 0.05, p.H + 0.025, s * (cabW / 2 - 0.08)); cab.add(rl); });
+    if (kind === 'sedan' || kind === 'compact') { var sr = bmesh(0.5, 0.012, cabW * 0.5, CM.glass); sr.position.set(cb[1][0] - 0.45, p.H + 0.006, 0); cab.add(sr); } // サンルーフ
+    if (look.tl.pillar) [-1, 1].forEach(function (s) { var tp = bmesh(0.05, 0.42, 0.11, CM.tail); tp.position.set(cb[cb.length - 1][0] + 0.005, p.lowTop + 0.24, s * (cabW / 2 - 0.06)); cab.add(tp); }); // ワゴンの縦長テール
+  } else {
+    // オープンカー：屋根なし。フロントガラス枠・内装（座席・ヘッドレスト・ハンドル・ダッシュボード）・ロールバー
+    var wsg = new T.Group(); wsg.userData.part = 'roof'; body.add(wsg);
+    var w0 = look.ws[0], w1 = look.ws[1];
+    wsg.add(slab(w0, w1, Wd * 0.84, 0.03, CM.wsGlass, [1, 0.3]));
+    var topBar = bmesh(0.05, 0.05, Wd * 0.86, CM.black); topBar.position.set(w1[0], w1[1], 0); wsg.add(topBar);
+    [-1, 1].forEach(function (s) { var ap = slab(w0, w1, 0.05, 0.05, CM.black, [1, 0.3]); ap.position.z = s * Wd * 0.43; wsg.add(ap); });
+    var tub = bmesh(1.12, 0.03, Wd * 0.8, CM.cockpit); tub.position.set(-0.02, p.lowTop + 0.012, 0); body.add(tub);
+    var dash = bmesh(0.16, 0.1, Wd * 0.8, CM.black); dash.position.set(0.46, p.lowTop + 0.04, 0); body.add(dash);
+    [-1, 1].forEach(function (s) {
+      var seat = new T.Group(); seat.position.set(-0.3, p.lowTop - 0.05, s * Wd * 0.22); body.add(seat);
+      var cush = bmesh(0.46, 0.12, 0.46, CM.seat); cush.position.set(0.18, 0.06, 0); seat.add(cush);
+      var back = bmesh(0.12, 0.5, 0.46, CM.seat); back.position.set(-0.04, 0.3, 0); back.rotation.z = 0.22; seat.add(back);
+      var hr = bmesh(0.1, 0.16, 0.26, CM.seat); hr.position.set(-0.12, 0.62, 0); hr.rotation.z = 0.22; seat.add(hr);
+      var hump = bmesh(0.6, 0.1, 0.34, bodyM); hump.position.set(-0.75, p.lowTop + 0.04, s * Wd * 0.22); body.add(hump); // ヘッドレスト後ろのこぶ
+    });
+    var sw = new T.Mesh(cached('steer', function () { return new T.TorusGeometry(0.15, 0.022, 6, 18); }), CM.black);
+    sw.position.set(0.24, p.lowTop + 0.2, Wd * 0.22); sw.rotation.set(0, Math.PI / 2, 0); sw.rotateX(-0.45); body.add(sw); // 右ハンドル
+  }
+  // ---- 前：ヘッドライト（ボンネットの角まで回り込むので上からも見える）・グリル・バンパー・ナンバー
+  var hlc = look.hl, tlc = look.tl, bumpM = look.bumper === 'trim' ? CM.trim : bodyM;
+  [-1, 1].forEach(function (s) {
+    var hood = function (x) { return hf[1] + (x - hf[0]) * (p.lowTop - hf[1]) / (look.cowl - hf[0]); };
+    var hz = s * (Wd / 2 - hlc.w / 2 - 0.05), hy0 = look.nose - hlc.h, hy1 = Math.max(look.nose, hood(L2 - 0.15)) + 0.01;
+    if (hlc.round) { // 丸目：前面に丸いレンズとメッキの縁。上面はボンネットの角に小さく出す
+      var rr0 = hlc.h * 0.62, ry = look.nose - rr0 - 0.01;
+      var rim0 = new T.Mesh(cached('hlrim' + rr0, function () { return new T.CylinderGeometry(rr0 + 0.025, rr0 + 0.025, 0.05, 18); }), CM.chrome); rim0.rotation.z = Math.PI / 2; rim0.position.set(L2 + 0.012, ry, hz); body.add(rim0);
+      var lens = new T.Mesh(cached('hllens' + rr0, function () { return new T.CylinderGeometry(rr0, rr0, 0.07, 18); }), CM.headR); lens.rotation.z = Math.PI / 2; lens.position.set(L2 + 0.014, ry, hz); body.add(lens);
+      var cap = bmesh(0.14, 0.03, hlc.w * 0.8, CM.headR); cap.position.set(L2 - 0.06, hy1 - 0.015, hz); body.add(cap);
+    } else { hy0 = look.nose - hlc.h * 0.6; var hb = bmesh(0.16, hy1 - hy0, hlc.w, CM.head); hb.position.set(L2 - 0.07, (hy0 + hy1) / 2, hz); body.add(hb); }
+    var am = bmesh(0.05, 0.06, 0.1, CM.amber); am.position.set(L2 + 0.01, y0 + 0.24, s * (Wd / 2 - 0.12)); body.add(am);
+  });
+  var gw = Wd - 2 * hlc.w - 0.2, gy0 = look.grille === 'intake' ? y0 + 0.05 : y0 + 0.24, gy1 = look.grille === 'intake' ? y0 + 0.17 : look.nose - 0.03;
+  if (look.grille === 'slot') { gy0 = look.nose - 0.12; gy1 = look.nose - 0.03; }
+  var fb = bmesh(0.12, 0.2, Wd * 0.98, bumpM, true); fb.position.set(L2 - 0.02, y0 + 0.1, 0); fb.userData.part = 'bumper'; body.add(fb);
+  if (look.grille === 'intake') { // スポーツ：バンパーの左右に大きな開口（真ん中はナンバー）
+    [-1, 1].forEach(function (s) { var it = bmesh(0.03, 0.12, Wd * 0.26, grilleMat('intake')); it.position.set(0.055, -0.01, s * Wd * 0.3); fb.add(it); });
+    var sl = bmesh(0.03, 0.05, Wd * 0.5, grilleMat('mesh')); sl.position.set(L2 + 0.005, look.nose - 0.05, 0); body.add(sl);
+  } else { var gr = bmesh(0.04, Math.max(0.05, gy1 - gy0), gw, grilleMat(look.grille)); gr.position.set(L2 + 0.012, (gy0 + gy1) / 2, 0); body.add(gr); }
+  var lip = bmesh(0.06, 0.04, Wd * 0.9, CM.black); fb.add(lip); lip.position.set(0.02, -0.09, 0);
+  var fp = new T.Mesh(cached('plateG', function () { return new T.PlaneGeometry(0.34, 0.17); }), plateMat(car)); fp.rotation.y = Math.PI / 2; fp.position.set(0.062, 0.0, 0); fb.add(fp);
+  // ---- 後ろ：テールライト（赤、デッキの角まで回り込む）・ナンバー・バンパー・マフラー
+  [-1, 1].forEach(function (s) {
+    if (tlc.round) {
+      for (var n = 0; n < tlc.n; n++) { var tr = new T.Mesh(cached('tlr' + tlc.round, function () { return new T.CylinderGeometry(tlc.round, tlc.round, 0.05, 14); }), CM.tail); tr.rotation.z = Math.PI / 2; tr.position.set(-L2 - 0.008, look.tail - 0.1, s * (Wd / 2 - 0.16 - n * 0.2)); body.add(tr); }
+      return;
+    }
+    var ty1 = Math.max(look.tail, p.lowTop) + 0.012, ty0 = ty1 - tlc.h;
+    var tb = bmesh(0.14, tlc.h, tlc.w, CM.tail); tb.position.set(-L2 + 0.06, (ty0 + ty1) / 2, s * (Wd / 2 - tlc.w / 2 - 0.04)); body.add(tb);
+    var rv = bmesh(0.03, Math.min(0.06, tlc.h * 0.4), Math.min(0.1, tlc.w * 0.5), CM.head); rv.position.set(-L2 - 0.01, ty0 + 0.04, s * (Wd / 2 - tlc.w * 0.6 - 0.04)); body.add(rv);
+  });
+  if (tlc.bar) { var gar = bmesh(0.03, 0.05, Wd - 2 * tlc.w - 0.12, CM.chrome); gar.position.set(-L2 - 0.008, look.tail - 0.06, 0); body.add(gar); }
+  var rb = bmesh(0.12, 0.2, Wd * 0.98, bumpM, true); rb.position.set(-L2 + 0.02, y0 + 0.1, 0); rb.userData.part = 'bumper'; body.add(rb);
+  [-1, 1].forEach(function (s) { var rf = bmesh(0.02, 0.03, 0.14, CM.refl); rf.position.set(-0.062, 0.04, s * Wd * 0.38); rb.add(rf); });
+  var rp = new T.Mesh(cached('plateG', function () { return new T.PlaneGeometry(0.34, 0.17); }), plateMat(car)); rp.rotation.y = -Math.PI / 2; rp.position.set(-L2 - 0.006, y0 + 0.33, 0); body.add(rp);
+  (kind === 'sports' ? [-0.12, 0.12, -0.26, 0.26].map(function (z) { return z + Wd * 0.18 * Math.sign(z); }) : [Wd * 0.3]).forEach(function (z) {
+    var ex = new T.Mesh(cached('exh', function () { return new T.CylinderGeometry(0.04, 0.04, 0.16, 10); }), CM.chrome); ex.rotation.z = Math.PI / 2; ex.position.set(-L2 - 0.03, y0 + 0.02, z); body.add(ex);
+  });
+  // ---- サイドミラー（ドアの前端・車体色）
+  [-1, 1].forEach(function (s) {
+    var mx = look.cowl - 0.12, mi = bmesh(0.1, 0.09, 0.15, bodyM); mi.position.set(mx, p.lowTop + 0.1, s * (Wd / 2 + 0.06)); mi.userData.part = 'mirror'; body.add(mi);
+    var mg = bmesh(0.012, 0.07, 0.12, CM.glass); mg.position.set(-0.052, 0, 0); mi.add(mg);
+    var st = bmesh(0.05, 0.03, 0.12, CM.black); st.position.set(0.0, -0.04, -s * 0.1); mi.add(st);
+  });
+  // ---- スポーツ：リアウイング・ボンネットのダクト
+  if (look.wing) {
+    var deckY = look.tail; wing = bmesh(0.3, 0.04, Wd * 0.92, CM.black, true); wing.position.set(-L2 + 0.2, deckY + 0.26, 0); wing.userData.part = 'wing'; body.add(wing);
+    [-1, 1].forEach(function (s) { var st = bmesh(0.08, 0.26, 0.04, CM.black); st.position.set(0.02, -0.13, s * Wd * 0.3); wing.add(st); var ep = bmesh(0.34, 0.12, 0.02, CM.black); ep.position.set(0, 0.02, s * Wd * 0.46); wing.add(ep); });
+    [-1, 1].forEach(function (s) { var dv = slab([look.cowl + 0.25, p.lowTop - 0.03], [look.cowl + 0.65, p.lowTop - 0.09], 0.16, 0.012, CM.black, [0, 1]); dv.position.z = s * 0.28; body.add(dv); });
+  }
+  // ---- タイヤ（トレッド＋サイドウォール）とホイール（車種ごとの意匠）
+  var rimFace = wheelMat(look.wheel);
+  var tyreGeo = cached('tyre' + r, function () { return new T.CylinderGeometry(r, r, 0.24, 20); });
+  var rimGeo = cached('rim' + r, function () { return new T.CylinderGeometry(r * 0.66, r * 0.66, 0.245, 18); });
+  [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) {
+    var t = new T.Mesh(tyreGeo, tyreFaceM); t.rotation.x = Math.PI / 2; t.castShadow = true; // 1 マテリアル＝1 描画（サイドウォールの輪はテクスチャ）
+    t.position.set(q[0] * (L2 - r - 0.3), r, q[1] * (Wd / 2 - 0.08)); body.add(t); t.userData.part = 'tyre';
+    var rim = new T.Mesh(rimGeo, rimFace); t.add(rim); // タイヤの子（爆発で一緒に外れて転がる）
+  });
+  mergeDetails(body);
+  if (car.flip < 0) body.rotation.y = Math.PI;
+  // タップ判定用の見えない箱
+  var hit = new T.Mesh(new T.BoxGeometry(Lh + 0.3, p.H + 0.4, Wd + 0.3), new T.MeshBasicMaterial({ visible: false }));
+  hit.position.y = p.H / 2; hit.userData.carId = car.id; g.add(hit);
+  g.position.set(car.x, 0, car.z); g.rotation.y = car.yaw;
+  return { group: g, body: body, hit: hit, mats: mats, decals: [], bodyM: bodyM, trimM: CM.trim, look: look, wheelR: r };
+}
+
+// 値札（各車の上：価値と囲まれ度）
+function tagTexture(car, selected) {
+  var v = L.carValue(lot, car), s = L.surround(lot, car), dmg = car.damage > 0.001;
+  return canvasTex(256, 128, function (g, w, h) {
+    g.fillStyle = selected ? '#ffcc1a' : 'rgba(255,250,236,.95)';
+    g.beginPath(); g.roundRect(6, 6, w - 12, 92, 18); g.fill();
+    g.beginPath(); g.moveTo(w / 2 - 14, 96); g.lineTo(w / 2 + 14, 96); g.lineTo(w / 2, 120); g.closePath(); g.fill();
+    g.strokeStyle = selected ? '#7a4a00' : 'rgba(0,0,0,.35)'; g.lineWidth = 4; g.beginPath(); g.roundRect(6, 6, w - 12, 92, 18); g.stroke();
+    g.fillStyle = dmg ? '#c0301c' : '#1d1a14'; g.font = '900 62px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('¥' + v + '万', w / 2, 40);
+    var st = ''; for (var i = 0; i < 4; i++) st += i < s.stars ? '★' : '☆';
+    g.font = '900 28px sans-serif'; g.fillStyle = '#d08a00'; g.fillText(st + (dmg ? ' 傷' : ''), w / 2, 82);
+  });
+}
+function updateTag(car) {
+  var m = models[car.id]; if (!m) return;
+  var sel = state.aimId === car.id && !state.car;
+  if (m.tag) { m.tag.material.map.dispose(); m.tag.material.map = tagTexture(car, sel); m.tag.material.needsUpdate = true; }
+  else { m.tag = new T.Sprite(new T.SpriteMaterial({ map: tagTexture(car, sel), depthTest: false, transparent: true })); m.tag.renderOrder = 8; m.tag.center.set(0.5, 0); scene.add(m.tag); }
+  m.tag.position.set(car.x, car.type.H + 0.35, car.z);
+  var s = sel ? 3.2 : 2.5; m.tag.scale.set(s, s / 2, 1);
+}
+// 傷のデカール：接触点に近い側面に貼る
+var scratchTex = canvasTex(128, 64, function (g, w, h) {
+  g.clearRect(0, 0, w, h); g.lineCap = 'round';
+  for (var i = 0; i < 9; i++) { g.strokeStyle = i % 3 ? 'rgba(235,235,235,.95)' : 'rgba(60,60,60,.8)'; g.lineWidth = 2 + Math.random() * 3; g.beginPath(); var y = 12 + Math.random() * 40; g.moveTo(6 + Math.random() * 20, y); g.lineTo(w - 6 - Math.random() * 20, y + (Math.random() - 0.5) * 14); g.stroke(); }
+});
+var dentTex = canvasTex(128, 64, function (g, w, h) {
+  var gr = g.createRadialGradient(64, 32, 4, 64, 32, 30); gr.addColorStop(0, 'rgba(20,20,20,.75)'); gr.addColorStop(1, 'rgba(20,20,20,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(240,240,240,.95)'; g.lineWidth = 3; for (var i = 0; i < 6; i++) { g.beginPath(); g.moveTo(64, 32); var a = Math.random() * Math.PI * 2; g.lineTo(64 + Math.cos(a) * 34, 32 + Math.sin(a) * 18); g.stroke(); }
+});
+function addDecal(car, wx, wy, wz, heavy) {
+  var m = models[car.id]; if (!m) return;
+  var loc = L.toLocal(wx - car.x, wz - car.z, car.yaw), p = car.type;
+  var plane = new T.Mesh(new T.PlaneGeometry(heavy ? 0.8 : 0.9, heavy ? 0.42 : 0.3), new T.MeshBasicMaterial({ map: heavy ? dentTex : scratchTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+  var y = L.clamp(wy, 0.35, p.lowTop - 0.12);
+  if (Math.abs(loc[1]) / p.W > Math.abs(loc[0]) / p.L) { var sz = loc[1] < 0 ? -1 : 1; plane.position.set(L.clamp(loc[0], -p.L / 2 + 0.5, p.L / 2 - 0.5), y, sz * (p.W / 2 + 0.012)); plane.rotation.y = sz < 0 ? Math.PI : 0; }
+  else { var sx = loc[0] < 0 ? -1 : 1; plane.position.set(sx * (p.L / 2 + 0.012), y, L.clamp(loc[1], -p.W / 2 + 0.4, p.W / 2 - 0.4)); plane.rotation.y = sx * Math.PI / 2; }
+  m.group.add(plane); m.decals.push(plane);
+}
+
+// ------------------------------------------------------------------ 演出：粒子
+var dustTex = canvasTex(64, 64, function (g) { var gr = g.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(200,196,188,.9)'); gr.addColorStop(1, 'rgba(200,196,188,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+var sparkTex = canvasTex(64, 64, function (g) { var gr = g.createRadialGradient(32, 32, 1, 32, 32, 30); gr.addColorStop(0, 'rgba(255,255,230,1)'); gr.addColorStop(0.3, 'rgba(255,200,80,.9)'); gr.addColorStop(1, 'rgba(255,90,20,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+var fx = [];
+function dust(x, z, n, size) {
+  for (var i = 0; i < n; i++) {
+    var s = new T.Sprite(new T.SpriteMaterial({ map: dustTex, transparent: true, depthWrite: false, opacity: 0.8 }));
+    var a = Math.random() * Math.PI * 2, r = Math.random() * size * 0.6;
+    s.position.set(x + Math.cos(a) * r, 0.3 + Math.random() * size * 0.3, z + Math.sin(a) * r); s.scale.setScalar(size * (0.5 + Math.random() * 0.6));
+    scene.add(s); fx.push({ o: s, v: new T.Vector3(Math.cos(a) * 3 * Math.random(), 1 + Math.random() * 2, Math.sin(a) * 3 * Math.random()), life: 1.4 + Math.random(), age: 0, kind: 'dust', s0: s.scale.x });
+  }
+}
+function sparks(x, y, z, n, power) {
+  for (var i = 0; i < n; i++) {
+    var s = new T.Sprite(new T.SpriteMaterial({ map: sparkTex, transparent: true, depthWrite: false, depthTest: false, blending: T.AdditiveBlending }));
+    s.renderOrder = 9; s.position.set(x, y, z); var sz = 0.3 + Math.random() * 0.35 * power; s.scale.setScalar(sz);
+    var a = Math.random() * Math.PI * 2, sp = (2 + Math.random() * 5) * power;
+    scene.add(s); fx.push({ o: s, v: new T.Vector3(Math.cos(a) * sp, 1.5 + Math.random() * 4 * power, Math.sin(a) * sp), life: 0.5 + Math.random() * 0.5, age: 0, kind: 'spark', s0: sz });
+  }
+  // 閃光
+  var fl = new T.Sprite(new T.SpriteMaterial({ map: sparkTex, transparent: true, depthWrite: false, depthTest: false, blending: T.AdditiveBlending }));
+  fl.renderOrder = 9; fl.position.set(x, y, z); fl.scale.setScalar(1.2 * power + 0.6); scene.add(fl);
+  fx.push({ o: fl, v: new T.Vector3(), life: 0.25, age: 0, kind: 'flash', s0: fl.scale.x });
+}
+// 接触の擬音バースト（「ギギッ」＝こすった／「ガチン!」＝ぶつけた）
+function burstTex(text, fill, ink) {
+  return canvasTex(256, 256, function (g, w, h) {
+    g.translate(w / 2, h / 2); g.beginPath();
+    for (var i = 0; i < 24; i++) { var a = i / 24 * Math.PI * 2, r = i % 2 ? 70 : 118; g.lineTo(Math.cos(a) * r, Math.sin(a) * r * 0.8); }
+    g.closePath(); g.fillStyle = fill; g.fill(); g.lineWidth = 8; g.strokeStyle = ink; g.stroke();
+    g.rotate(-0.12); g.fillStyle = ink; g.font = '900 ' + (text.length > 3 ? 56 : 66) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 0, 4);
+  });
+}
+var burstScrape = burstTex('ギギッ', '#ffe36a', '#8a3a00'), burstBump = burstTex('ガチン!', '#ff5a2a', '#fff6c8');
+function burst(x, y, z, hard) {
+  var s = new T.Sprite(new T.SpriteMaterial({ map: hard ? burstBump : burstScrape, depthTest: false, transparent: true }));
+  s.renderOrder = 10; s.position.set(x, y, z); var sz = hard ? 2.4 : 1.7; s.scale.setScalar(sz * 0.4); scene.add(s);
+  fx.push({ o: s, v: new T.Vector3(0, 0.6, 0), life: hard ? 1.1 : 0.9, age: 0, kind: 'burst', s0: sz });
+}
+var confColors = [0xff4d3a, 0xffcf1a, 0x3ac0ff, 0x6ee05a, 0xff7ad9, 0xffffff];
+function confetti(x, y, z) {
+  for (var i = 0; i < 80; i++) {
+    var m = new T.Mesh(new T.PlaneGeometry(0.3, 0.2), new T.MeshBasicMaterial({ color: confColors[i % confColors.length], side: T.DoubleSide }));
+    m.position.set(x, y, z); scene.add(m);
+    var a = Math.random() * Math.PI * 2, sp = 3 + Math.random() * 6;
+    fx.push({ o: m, v: new T.Vector3(Math.cos(a) * sp * 0.6, 6 + Math.random() * 7, Math.sin(a) * sp * 0.6), w: new T.Vector3(Math.random() * 8, Math.random() * 8, 0), life: 3.5, age: 0, kind: 'conf' });
+  }
+}
+function stepFx(dt) {
+  for (var i = fx.length - 1; i >= 0; i--) {
+    var f = fx[i]; f.age += dt;
+    if (f.kind === 'dust') { f.o.position.addScaledVector(f.v, dt); f.v.multiplyScalar(1 - 1.5 * dt); f.o.scale.setScalar(f.s0 * (1 + f.age * 0.8)); f.o.material.opacity = 0.8 * Math.max(0, 1 - f.age / f.life); }
+    else if (f.kind === 'spark') { f.v.y -= 9.8 * dt; f.o.position.addScaledVector(f.v, dt); if (f.o.position.y < 0.03) { f.o.position.y = 0.03; f.v.y *= -0.3; f.v.x *= 0.5; f.v.z *= 0.5; } f.o.material.opacity = Math.max(0, 1 - f.age / f.life); }
+    else if (f.kind === 'burst') { var kb = Math.min(1, f.age / 0.12); f.o.scale.setScalar(f.s0 * (0.4 + 0.75 * kb - 0.1 * Math.max(0, kb - 0.8))); f.o.position.addScaledVector(f.v, dt); f.o.material.opacity = f.age < f.life * 0.7 ? 1 : Math.max(0, 1 - (f.age - f.life * 0.7) / (f.life * 0.3)); }
+    else if (f.kind === 'flash') { f.o.scale.setScalar(f.s0 * (1 + f.age * 4)); f.o.material.opacity = Math.max(0, 1 - f.age / f.life); }
+    else if (f.kind === 'fire' || f.kind === 'fireball') {
+      // 白→黄→橙→赤と冷えながら上る
+      var u = f.age / f.life; f.v.y += (f.kind === 'fire' ? 3 : 1.5) * dt; f.v.x *= 1 - 2 * dt; f.v.z *= 1 - 2 * dt; f.o.position.addScaledVector(f.v, dt);
+      var grow = f.kind === 'fireball' ? Math.min(1, f.age / 0.18) * (1 + u * 0.5) : 0.5 + u * 0.9;
+      f.o.scale.setScalar(f.s0 * grow);
+      f.o.material.color.setRGB(1, Math.max(0.22, 0.78 - u * 0.75), Math.max(0.04, 0.42 - u * 0.9));
+      var pk = f.kind === 'fireball' ? 0.7 : 0.75;
+      f.o.material.opacity = pk * (u < 0.2 ? 1 : Math.max(0, 1 - (u - 0.2) / 0.8));
+    }
+    else if (f.kind === 'smoke') {
+      var us = f.age / f.life; f.v.y = Math.max(0.5, f.v.y - 0.3 * dt); f.v.x *= 1 - 0.9 * dt; f.v.z *= 1 - 0.9 * dt; f.o.position.addScaledVector(f.v, dt); f.o.position.x += 0.35 * dt; // ゆるい風
+      f.o.scale.setScalar(f.s0 * (1 + us * 2.2)); f.o.material.rotation += f.spin * dt;
+      f.o.material.opacity = f.op * (us < 0.08 ? us / 0.08 : Math.max(0, 1 - (us - 0.08) / 0.92));
+    }
+    else if (f.kind === 'ring') { var ur = f.age / f.life; f.o.scale.setScalar(f.s0 * (0.15 + 0.85 * Math.sqrt(ur))); f.o.material.opacity = Math.max(0, 1 - ur); }
+    else { f.v.y -= 9.8 * dt; f.v.multiplyScalar(1 - 1.2 * dt); f.o.position.addScaledVector(f.v, dt); f.o.rotation.x += f.w.x * dt; f.o.rotation.y += f.w.y * dt; if (f.o.position.y < 0.05) { f.o.position.y = 0.05; f.v.set(0, 0, 0); f.w.set(0, 0, 0); } }
+    if (f.age > f.life) { scene.remove(f.o); f.o.material.dispose(); if (f.kind === 'conf' || f.kind === 'ring') f.o.geometry.dispose(); fx.splice(i, 1); }
+  }
+}
+
+// ------------------------------------------------------------------ v2.2 落下時の大破・爆発
+var fireTex = canvasTex(64, 64, function (g) { var gr = g.createRadialGradient(32, 32, 1, 32, 32, 31); gr.addColorStop(0, 'rgba(255,255,235,1)'); gr.addColorStop(0.25, 'rgba(255,214,110,.95)'); gr.addColorStop(0.6, 'rgba(255,110,25,.55)'); gr.addColorStop(1, 'rgba(160,30,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+var smokeTex = canvasTex(128, 128, function (g, w, h) {
+  // もこもこした煙の塊：やわらかい円をいくつも重ねる
+  for (var i = 0; i < 18; i++) {
+    var a = Math.random() * Math.PI * 2, r = Math.random() * 26, x = 64 + Math.cos(a) * r, y = 64 + Math.sin(a) * r, rr = 22 + Math.random() * 20;
+    var gr = g.createRadialGradient(x, y, 1, x, y, rr); var v = 200 + Math.random() * 40 | 0;
+    gr.addColorStop(0, 'rgba(' + v + ',' + v + ',' + v + ',.42)'); gr.addColorStop(1, 'rgba(' + v + ',' + v + ',' + v + ',0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  }
+});
+var scorchTex = canvasTex(256, 256, function (g, w, h) {
+  g.translate(w / 2, h / 2);
+  var gr = g.createRadialGradient(0, 0, 4, 0, 0, 124); gr.addColorStop(0, 'rgba(8,6,4,.95)'); gr.addColorStop(0.55, 'rgba(18,14,10,.85)'); gr.addColorStop(1, 'rgba(30,24,18,0)');
+  g.fillStyle = gr; g.beginPath(); for (var i = 0; i <= 40; i++) { var a = i / 40 * Math.PI * 2, r = 96 + Math.random() * 30; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.fill();
+  g.strokeStyle = 'rgba(10,8,6,.6)'; g.lineWidth = 4; for (var k = 0; k < 14; k++) { var b = Math.random() * Math.PI * 2; g.beginPath(); g.moveTo(Math.cos(b) * 60, Math.sin(b) * 60); g.lineTo(Math.cos(b) * (110 + Math.random() * 16), Math.sin(b) * (110 + Math.random() * 16)); g.stroke(); }
+});
+var ringTex = canvasTex(128, 128, function (g) { var gr = g.createRadialGradient(64, 64, 30, 64, 64, 63); gr.addColorStop(0, 'rgba(255,230,180,0)'); gr.addColorStop(0.7, 'rgba(255,220,160,.8)'); gr.addColorStop(1, 'rgba(255,200,140,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); });
+// 爆発の照り返し。最初から置いておく（途中でライトを足すとシェーダーの作り直しで一瞬止まるため）
+var boomLight = new T.PointLight(0xff9a3a, 0, 26, 1.4); boomLight.position.set(0, -50, 0); scene.add(boomLight);
+var CHAR = new T.Color(0x1d1a16), EMBER = new T.Color(0xff5a14);
+var debris = [], charList = [], emitters = [], wreckObjs = [], boomA = 0, shutterA = 0, lightK = 0;
+
+function fireP(x, y, z, size, v, life, big) {
+  var s = new T.Sprite(new T.SpriteMaterial({ map: fireTex, transparent: true, depthWrite: false, blending: T.AdditiveBlending, color: 0xfff2d0 }));
+  s.renderOrder = 7; s.position.set(x, y, z); s.scale.setScalar(size * 0.4); scene.add(s);
+  fx.push({ o: s, v: v, life: life, age: 0, kind: big ? 'fireball' : 'fire', s0: size });
+}
+function smokeP(x, y, z, size, v, life, dark, opK) {
+  var c = dark ? 0x2b2723 : 0x5a5650;
+  var s = new T.Sprite(new T.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, color: c, opacity: 0, rotation: Math.random() * Math.PI * 2 }));
+  s.renderOrder = 6; s.position.set(x, y, z); s.scale.setScalar(size); scene.add(s);
+  fx.push({ o: s, v: v, life: life, age: 0, kind: 'smoke', s0: size, op: (dark ? 0.62 : 0.45) * (opK || 1), spin: (Math.random() - 0.5) * 0.6 });
+}
+function rnd(a, b) { return a + Math.random() * (b - a); }
+// 地面（または停まっている車の屋根）の高さ：飛んだ部品が車の上にも乗るように
+function floorAt(x, z) { var y = 0; L.presentCars(lot).forEach(function (c) { if (L.inFootprint(c, x, z, 0)) y = Math.max(y, L.topAtWorld(c, x, z)); }); return y; }
+function fling(o, cx, cz, speed, up) {
+  var wp = o.getWorldPosition(new T.Vector3()), dx = wp.x - cx, dz = wp.z - cz, d = Math.hypot(dx, dz) || 1, a = Math.atan2(dz, dx) + rnd(-0.6, 0.6);
+  var sp = speed * rnd(0.55, 1.15);
+  var v = new T.Vector3(Math.cos(a) * sp, up * rnd(0.6, 1.2), Math.sin(a) * sp);
+  debris.push({ o: o, v: v, w: new T.Vector3(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).multiplyScalar(rnd(5, 13)), rest: false, t: 0 });
+  wreckObjs.push(o);
+}
+function charMaterials(root, glow) {
+  root.traverse(function (o) {
+    if (!o.isMesh || !o.material || o.userData.charred) return; o.userData.charred = true;
+    (Array.isArray(o.material) ? o.material : [o.material]).forEach(function (m) {
+      if (m.userData.charred) return; m.userData.charred = true;
+      charList.push({ m: m, from: m.color.clone(), to: CHAR.clone().offsetHSL(0, 0, rnd(-0.03, 0.04)), t: 0, glow: glow });
+    });
+  });
+}
+
+/** 車を大破させる：部品が飛び、火の玉・炎・煙・閃光・衝撃波・焦げ跡、黒焦げ、爆発音、大きな揺れ */
+function explode(m, car, k) {
+  var w = L.wreckPlan(k), b = m.body, p = car.type, look = m.look;
+  // v2.3：共通マテリアル（ガラス・ライト・タイヤ…）は他の車と共有しているので、この車の分だけ複製してから黒焦げにする
+  var mcache = new Map(), iso = function (mt) { if (!mcache.has(mt)) mcache.set(mt, mt.clone()); return mcache.get(mt); };
+  b.traverse(function (o) { if (o.isMesh && o.material) o.material = Array.isArray(o.material) ? o.material.map(iso) : iso(o.material); });
+  var bodyM = iso(m.bodyM), trimM = iso(m.trimM), glassM0 = iso(CM.glass);
+  b.updateMatrixWorld(true);
+  var bb = new T.Box3().setFromObject(b), ctr = bb.getCenter(new T.Vector3()), cx = ctr.x, cz = ctr.z;
+  // ---- 部品を外す（タイヤ・屋根・バンパー・ウイング）
+  var parts = []; b.traverse(function (o) { if (o.userData.part) parts.push(o); });
+  var tyres = parts.filter(function (o) { return o.userData.part === 'tyre'; }).sort(function () { return Math.random() - 0.5; }).slice(0, w.tyres);
+  var off = tyres.slice();
+  parts.forEach(function (o) {
+    var pt = o.userData.part;
+    if ((pt === 'roof' && w.roofOff) || (pt === 'bumper' && k > 0.55) || (pt === 'wing' && k > 0.35) || (pt === 'mirror' && k > 0.3)) off.push(o);
+  });
+  if (k <= 0.8) { var bm = off.filter(function (o) { return o.userData.part === 'bumper'; }); if (bm.length > 1) off.splice(off.indexOf(bm[Math.random() < 0.5 ? 0 : 1]), 1); } // 中くらいの爆発ではバンパーは片方だけ
+  off.forEach(function (o) { scene.attach(o); fling(o, cx, cz, w.partSpeed * (o.userData.part === 'roof' ? 0.55 : 1), (o.userData.part === 'roof' ? 4.5 : 3.5) + 4 * k); });
+  // ---- ドア・ボンネット：車体の色の板が吹き飛ぶ
+  // v2.3：実際のドアの位置・大きさで、窓（ガラス＋窓枠）とドアハンドルの付いたドアが外れる。ドアの少ない車種はトランク／フェンダーが飛ぶ
+  var y0 = 0.2, made = [], slots = [];
+  look.doors.forEach(function (d) { [1, -1].forEach(function (sz) { slots.push({ d: d, sz: sz }); }); });
+  for (var i = 0; i < w.doors; i++) {
+    var sl = slots[i];
+    if (sl) {
+      var dl = sl.d[0] - sl.d[1], dh = p.lowTop - y0 - 0.08, door = new T.Group(); door.userData.part = 'door';
+      var pan = box(dl - 0.04, dh, 0.06, bodyM); pan.position.y = 0; door.add(pan);
+      var hd = bmesh(0.17, 0.035, 0.02, trimM); hd.position.set(-dl / 2 + 0.16, dh / 2 - 0.1, sl.sz * 0.04); door.add(hd);
+      if (look.cabin) {
+        var wt = p.H - 0.1 - p.lowTop, gl = bmesh(dl - 0.18, wt, 0.025, glassM0); gl.position.set(-0.02, dh / 2 + wt / 2, 0); door.add(gl);
+        var fr = bmesh(dl - 0.12, 0.04, 0.04, bodyM); fr.position.set(-0.02, dh / 2 + wt + 0.01, 0); door.add(fr);
+        var fp = bmesh(0.04, wt, 0.04, bodyM); fp.position.set(-dl / 2 + 0.08, dh / 2 + wt / 2, 0); door.add(fp);
+      }
+      door.position.set((sl.d[0] + sl.d[1]) / 2, y0 + 0.08 + dh / 2, sl.sz * (p.W / 2 + 0.035)); b.add(door); made.push(door);
+    } else {
+      var trunk = i === slots.length;
+      var pc = trunk ? box(0.8, 0.05, p.W * 0.8, bodyM) : box(0.9, p.lowTop - y0 - 0.1, 0.05, bodyM); pc.userData.part = trunk ? 'trunk' : 'fender';
+      if (trunk) pc.position.set(-p.L / 2 + 0.45, Math.max(look.tail, p.lowTop) + 0.03, 0); else pc.position.set(-p.L / 2 + 0.6, y0 + 0.35, (i % 2 ? -1 : 1) * (p.W / 2 + 0.03));
+      b.add(pc); made.push(pc);
+    }
+  }
+  if (w.hoodOff) { // ボンネット：付け根から先端までの斜面に合わせた板（スポーツはダクト付き）
+    var hood = slab([look.cowl, p.lowTop], look.hf, p.W * 0.86, 0.05, bodyM, [0, 1], 0.02); hood.userData.part = 'hood'; b.add(hood); made.push(hood);
+    if (look.scoop) [-1, 1].forEach(function (s) { var v = bmesh(0.3, 0.02, 0.14, trimM); v.position.set(-0.1, 0.03, s * 0.28); hood.add(v); });
+  }
+  b.updateMatrixWorld(true);
+  made.forEach(function (o) { scene.attach(o); fling(o, cx, cz, w.partSpeed * 0.9, 4 + 5 * k); });
+  // ---- 細かい破片（車体の色・黒い樹脂・ガラス）
+  var glassM = mat(0xa9c4d6), shardMs = [bodyM, trimM, glassM];
+  for (var s = 0; s < w.shards; s++) {
+    var sh = box(rnd(0.08, 0.3), rnd(0.03, 0.08), rnd(0.08, 0.26), shardMs[s % 3]); sh.castShadow = false;
+    sh.position.set(cx + rnd(-p.L / 3, p.L / 3), rnd(0.4, 1.0), cz + rnd(-p.W / 2, p.W / 2)); scene.add(sh);
+    fling(sh, cx, cz, w.partSpeed * 1.3, 3 + 6 * k);
+  }
+  // ---- 車体はつぶれて黒焦げに
+  b.scale.y *= w.crush; b.scale.x *= 1 + (1 - w.crush) * 0.15;
+  charMaterials(b, 1); off.concat(made).forEach(function (o) { charMaterials(o, 0.6); });
+  // ---- 火の玉・炎・煙・衝撃波・火花・閃光
+  var gy = 0.7;
+  for (var f = 0; f < 3 + Math.round(4 * k); f++) fireP(cx + rnd(-0.6, 0.6), gy + rnd(0, 0.8), cz + rnd(-0.6, 0.6), w.fireball * rnd(0.7, 1.05), new T.Vector3(rnd(-0.6, 0.6), rnd(1, 2.5), rnd(-0.6, 0.6)), rnd(0.7, 1.1), true);
+  for (var q = 0; q < w.fire; q++) {
+    var a = Math.random() * Math.PI * 2, sp = rnd(1, 6) * (0.5 + k);
+    fireP(cx + rnd(-p.L / 3, p.L / 3), gy + rnd(0, 0.6), cz + rnd(-p.W / 3, p.W / 3), rnd(0.6, 1.6) * (0.7 + k * 0.6), new T.Vector3(Math.cos(a) * sp, rnd(2, 7) * (0.6 + k * 0.6), Math.sin(a) * sp), rnd(0.5, 1.3), false);
+  }
+  for (var sm = 0; sm < w.smoke; sm++) {
+    var a2 = Math.random() * Math.PI * 2, sp2 = rnd(0.3, 2.2) * (0.5 + k);
+    smokeP(cx + rnd(-1, 1), gy + rnd(0.5, 1.8), cz + rnd(-1, 1), rnd(1.1, 2.1) * (0.8 + k * 0.6), new T.Vector3(Math.cos(a2) * sp2, rnd(1.4, 3.2) * (0.45 + 0.55 * k), Math.sin(a2) * sp2), rnd(3, 6), sm % 3 !== 0);
+  }
+  var ring = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: ringTex, transparent: true, depthWrite: false, blending: T.AdditiveBlending }));
+  ring.rotation.x = -Math.PI / 2; ring.position.set(cx, 0.06, cz); ring.renderOrder = 4; scene.add(ring);
+  fx.push({ o: ring, v: new T.Vector3(), life: 0.55, age: 0, kind: 'ring', s0: w.scorch * 3.2 });
+  sparks(cx, 0.8, cz, Math.round(30 + 70 * k), 1 + k);
+  dust(cx, cz, Math.round(8 + 14 * k), Math.max(p.L, p.W) * (0.6 + 0.4 * k));
+  // ---- 焦げ跡（地面に残る）
+  var sc = new T.Mesh(new T.PlaneGeometry(w.scorch, w.scorch), new T.MeshBasicMaterial({ map: scorchTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }));
+  sc.rotation.x = -Math.PI / 2; sc.rotation.z = Math.random() * Math.PI; sc.position.set(cx, 0.03, cz); sc.renderOrder = 2; scene.add(sc); wreckObjs.push(sc);
+  // ---- くすぶり続ける炎と煙
+  emitters.push({ body: b, t: 0, burn: w.burn, k: k, nf: 0, ns: 0 });
+  // ---- 光・揺れ・音
+  boomLight.position.set(cx, 1.6, cz); lightK = 1 + k; boomA = w.flash * 0.55; flash(1);
+  state.shake = Math.max(state.shake, w.shake);
+  Sfx.explode(k);
+  m.wreck = { power: k, plan: w, cx: cx, cz: cz, parts: off.length + made.length, t: 0, boom0: boomA, light0: 22 * lightK * lightK };
+  if (m.tag) m.tag.visible = false;
+  return m.wreck;
+}
+var _bx = new T.Box3();
+function stepWreck(dt) {
+  // 飛んだ部品：重力・回転・地面（車の屋根）で跳ねて止まる
+  for (var i = 0; i < debris.length; i++) {
+    var d = debris[i]; if (d.rest) continue; d.t += dt;
+    d.v.y -= 9.8 * dt; d.o.position.addScaledVector(d.v, dt);
+    d.o.rotation.x += d.w.x * dt; d.o.rotation.y += d.w.y * dt; d.o.rotation.z += d.w.z * dt;
+    _bx.setFromObject(d.o); var fl = floorAt(d.o.position.x, d.o.position.z), pen = fl - _bx.min.y;
+    if (pen > 0) {
+      d.o.position.y += pen;
+      if (d.v.y < -1.2) { d.v.y = -d.v.y * 0.32; d.v.x *= 0.62; d.v.z *= 0.62; d.w.multiplyScalar(0.55); }
+      else { d.v.y = 0; d.v.x *= Math.max(0, 1 - 4 * dt); d.v.z *= Math.max(0, 1 - 4 * dt); d.w.multiplyScalar(Math.max(0, 1 - 5 * dt)); }
+      if (Math.hypot(d.v.x, d.v.y, d.v.z) < 0.08 && d.w.length() < 0.3) d.rest = true;
+    }
+    if (d.t > 9) d.rest = true;
+  }
+  // 黒焦げへ：最初は赤く焼け、黒くなっていく
+  for (var c = charList.length - 1; c >= 0; c--) {
+    var ch = charList[c]; ch.t += dt; var k = Math.min(1, ch.t / 0.6);
+    ch.m.color.copy(ch.from).lerp(ch.to, k);
+    if (ch.m.emissive) { var e = Math.pow(Math.max(0, 1 - ch.t / 1.3), 2) * ch.glow; ch.m.emissive.copy(EMBER).multiplyScalar(e * 0.6); ch.m.emissiveIntensity = 1; }
+    if (ch.t > 1.4) { if (ch.m.emissive) ch.m.emissive.setRGB(0, 0, 0); charList.splice(c, 1); }
+  }
+  // くすぶり：炎と煙を出し続け、だんだん弱まる
+  for (var j = emitters.length - 1; j >= 0; j--) {
+    var em = emitters[j]; em.t += dt; var left = 1 - em.t / em.burn;
+    if (left <= 0) { emitters.splice(j, 1); continue; }
+    _bx.setFromObject(em.body); var bc = _bx.getCenter(new T.Vector3()), top = _bx.max.y;
+    em.nf += dt * (6 + 14 * em.k) * left; em.ns += dt * (1.8 + 2.5 * em.k) * Math.min(1, left * 1.5);
+    while (em.nf >= 1) { em.nf--; fireP(bc.x + rnd(-0.5, 0.5) * (_bx.max.x - _bx.min.x), top - 0.1, bc.z + rnd(-0.5, 0.5) * (_bx.max.z - _bx.min.z), rnd(0.5, 1.2) * (0.6 + 0.5 * left), new T.Vector3(rnd(-0.3, 0.3), rnd(1, 2.2), rnd(-0.3, 0.3)), rnd(0.4, 0.8), false); }
+    while (em.ns >= 1) { em.ns--; smokeP(bc.x + rnd(-0.5, 0.5), top + 0.4, bc.z + rnd(-0.5, 0.5), rnd(0.8, 1.4), new T.Vector3(rnd(-0.3, 0.3) + 0.4, rnd(1.6, 2.4), rnd(-0.3, 0.3) - 0.3), rnd(3.5, 5.5), true, 0.7); }
+  }
+  // 照り返しの光（炎のゆらぎ）・画面の閃光
+  var burning = emitters.length ? emitters[emitters.length - 1] : null;
+  lightK = Math.max(0, lightK - dt * 1.6);
+  boomLight.intensity = 22 * lightK * lightK + (burning ? (5 + 3 * Math.sin(performance.now() / 47) * Math.sin(performance.now() / 113)) * (1 - burning.t / burning.burn) : 0);
+  if (boomA > 0) { boomA = Math.max(0, boomA - dt * 1.4); }
+  $('boom').style.opacity = boomA;
+  if (shutterA > 0) { shutterA = Math.max(0, shutterA - dt * 3); }
+  $('shutter').style.opacity = shutterA;
+}
+function clearWrecks() {
+  wreckObjs.forEach(function (o) { o.removeFromParent(); }); wreckObjs.length = 0; debris.length = 0; charList.length = 0; emitters.length = 0;
+  lightK = 0; boomLight.intensity = 0; boomA = 0;
+}
+
+// ------------------------------------------------------------------ v2.2 写真（3D 画面のスナップショット）
+// preserveDrawingBuffer は使わず、撮る瞬間だけ写真用カメラで描き直し、同じタスク内で 2D キャンバスへ写し取る（同期）。
+// 画面にはそのあと普段のカメラで描き直すので、チラつかない。
+var photoCam = new T.PerspectiveCamera(42, 1, 0.3, 600), PHOTO_PX = 640; // v2.3：大きく出すので 640px
+var photoCount = 0;
+function capturePhoto(kind, cx, cy, cz, size, opt) {
+  var t0 = performance.now(), s = L.photoShot(cx, cy, cz, size, kind, opt);
+  photoCam.fov = s.fov; photoCam.position.set(s.pos[0], s.pos[1], s.pos[2]); photoCam.lookAt(s.look[0], s.look[1], s.look[2]); photoCam.updateProjectionMatrix();
+  // 画面用の目印（値札・照準・隙間・擬音）は写さない
+  var hidden = [], hide = function (o) { if (o && o.visible) { o.visible = false; hidden.push(o); } };
+  for (var id in models) hide(models[id].tag);
+  gapMarks.forEach(hide); hide(selFrame); hide(laser); hide(aim); tipMarks.forEach(hide);
+  fx.forEach(function (f) { if (f.kind === 'burst') hide(f.o); });
+  if (kind === 'wreck') { hide(Claw.group); hide(cableMesh); hide(cable2); } // v2.5：爆発のピークは爪がまだ真上にいて火の玉を隠すので、失敗写真には爪とケーブルを写さない
+  // カメラのすぐ前に飛んできた部品は写さない（レンズの前をふさぐため）
+  var _cp = photoCam.position;
+  if (_cp.z > FRONT_Z - 0.5) frontFence.forEach(hide); // 撮影者は駐車場の中に立つ（手前のフェンス越しにしない）
+  debris.forEach(function (d) { if (d.o.position.distanceTo(_cp) < s.dist * 0.5) hide(d.o); });
+  var prevPR = renderer.getPixelRatio(), pr = Math.max(prevPR, Math.min(maxPR, 1)); // 解像度を自動で下げている時だけ、写真は 1 倍まで戻して撮る
+  if (pr !== prevPR) { renderer.setPixelRatio(pr); renderer.setSize(W, H, false); }
+  var S = Math.min(W, H), px = Math.floor(S * pr);
+  renderer.setScissorTest(true); renderer.setViewport(0, H - S, S, S); renderer.setScissor(0, H - S, S, S);
+  var t1 = performance.now();
+  renderer.render(scene, photoCam);
+  var photoCv = document.createElement('canvas'); photoCv.width = photoCv.height = PHOTO_PX; // 1枚ごとに新しい印画紙
+  var t2 = performance.now(), g = photoCv.getContext('2d');
+  g.save(); g.filter = 'contrast(1.06) saturate(1.12) sepia(0.12)';
+  g.drawImage(canvas, 0, 0, px, px, 0, 0, PHOTO_PX, PHOTO_PX);  // ← ここが「キャプチャ」。描いた直後なので読める
+  g.restore();
+  var t3 = performance.now();
+  renderer.setScissorTest(false);
+  if (pr !== prevPR) { renderer.setPixelRatio(prevPR); renderer.setSize(W, H, false); } else renderer.setViewport(0, 0, W, H);
+  hidden.forEach(function (o) { o.visible = true; });
+  var t4 = performance.now();
+  renderer.render(scene, camera); // 画面は普段の絵へ（同じタスク内なので写真用の絵は一度も表示されない）
+  // 写真らしさ：周辺減光・光漏れ・日付の焼き込み
+  var vg = g.createRadialGradient(PHOTO_PX / 2, PHOTO_PX / 2, PHOTO_PX * 0.3, PHOTO_PX / 2, PHOTO_PX / 2, PHOTO_PX * 0.75);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(20,12,0,.45)'); g.fillStyle = vg; g.fillRect(0, 0, PHOTO_PX, PHOTO_PX);
+  var lk = g.createLinearGradient(0, 0, PHOTO_PX * 0.5, PHOTO_PX * 0.3); lk.addColorStop(0, kind === 'wreck' ? 'rgba(255,120,40,.22)' : 'rgba(255,190,120,.18)'); lk.addColorStop(1, 'rgba(255,190,120,0)'); g.fillStyle = lk; g.fillRect(0, 0, PHOTO_PX, PHOTO_PX);
+  var dt = new Date(), stamp = "'" + String(dt.getFullYear()).slice(2) + ' ' + (dt.getMonth() + 1) + ' ' + dt.getDate();
+  var fs = Math.round(PHOTO_PX * 0.054), mg = Math.round(PHOTO_PX * 0.046);
+  g.font = '700 ' + fs + 'px ui-monospace, Menlo, Consolas, monospace'; g.textAlign = 'right'; g.textBaseline = 'alphabetic';
+  g.shadowColor = 'rgba(255,90,0,.9)'; g.shadowBlur = 8; g.fillStyle = '#ffae3a'; g.fillText(stamp, PHOTO_PX - mg, PHOTO_PX - mg); g.shadowBlur = 0;
+  photoCount++;
+  // シャッター
+  Sfx.shutter(); shutterA = Math.max(shutterA, 0.55);
+  // JPEG への変換は非同期（toBlob）でメインスレッドを止めない。キャプチャ自体は上で同期的に済んでいる
+  var t5 = performance.now(), ph = { url: null, size: 0, ms: 0, kind: kind };
+  photoCv.toBlob(function (blob) {
+    if (!blob) return;
+    ph.url = URL.createObjectURL(blob); ph.size = blob.size;
+    if (state.lastResult && state.lastResult.photo === ph && $('photo').classList.contains('show')) $('pImg').src = ph.url; // カードが先に出ていたら差し込む
+  }, 'image/jpeg', 0.88);
+  ph.ms = performance.now() - t0; ph.prof = { pr: [prevPR, pr], setup: t1 - t0, render: t2 - t1, readback: t3 - t2, restore: t4 - t3, mainRender: t5 - t4, frameAvg: frameAvg };
+  ph.date = dt.getFullYear() + '.' + (dt.getMonth() + 1) + '.' + dt.getDate(); ph.cam = s;
+  return ph;
+}
+// v2.5：爆発の派手さ（写真のタイミング確認用）。ball＝火の玉の見かけの大きさ（Σ 大きさ²×不透明度）、fire＝炎の粒の同じ量、
+// air＝宙を飛んでいる部品の数、spread＝飛んでいる部品の中心からの距離（中央値）
+function boomFx() {
+  var m = state.car && models[state.car.id], wr = m && m.wreck, out = { ball: 0, fire: 0, air: 0, spread: 0 };
+  fx.forEach(function (f) { if (f.kind === 'fireball' || f.kind === 'fire') { var a = f.o.scale.x * f.o.scale.x * f.o.material.opacity; if (f.kind === 'fireball') out.ball += a; else out.fire += a; } });
+  if (wr) {
+    var ds = []; debris.forEach(function (d) { if (!d.rest && d.o.position.y > 0.35) ds.push(Math.hypot(d.o.position.x - wr.cx, d.o.position.z - wr.cz)); });
+    ds.sort(function (a, b) { return a - b; }); out.air = ds.length; out.spread = ds.length ? ds[ds.length >> 1] : 0;
+  }
+  return out;
+}
+function wreckPhoto() {
+  var m = models[state.car.id], wr = m && m.wreck; if (!wr) return null;
+  // v2.5：爆発のピーク（火の玉が最大・部品が飛び散っている最中）を撮る。写す箱＝つぶれた車体＋火の玉の芯＋宙を飛ぶ部品
+  var p = state.car.type, bp = new T.Box3().setFromObject(m.body), c = bp.getCenter(new T.Vector3());
+  var bx = { min: [bp.min.x, 0, bp.min.z], max: [bp.max.x, Math.max(bp.max.y, 0.8), bp.max.z] };
+  var R = Math.max(p.L, p.W) * 0.5 + 1.0, TOP = 4.2; // 遠くへ飛んだ部品まで追うと主役が小さくなるので、車の周り R m・高さ TOP m までに限る（外へ出た部品は画面の端を横切るだけ）
+  function add(x, y, z, r) {
+    x = L.clamp(x, c.x - R, c.x + R); z = L.clamp(z, c.z - R, c.z + R);
+    bx.min[0] = Math.min(bx.min[0], x - r); bx.max[0] = Math.max(bx.max[0], x + r);
+    bx.min[2] = Math.min(bx.min[2], z - r); bx.max[2] = Math.max(bx.max[2], z + r);
+    bx.max[1] = Math.min(TOP, Math.max(bx.max[1], y + r));
+  }
+  fx.forEach(function (f) { if (f.kind === 'fireball' && f.o.material.opacity > 0.25) { var q = f.o.position; add(q.x, q.y, q.z, Math.min(f.o.scale.x * 0.28, 2)); } }); // 火の玉の明るい芯（スプライトの約6割）
+  debris.forEach(function (d) { var q = d.o.position; if (!d.rest && q.y > 0.3 && q.y < TOP && Math.hypot(q.x - c.x, q.z - c.z) < R) add(q.x, q.y, q.z, 0.2); });
+  var ph = capturePhoto('wreck', c.x, 1.1, c.z, 8, { box: bx });
+  ph.power = wr.power; ph.boom = boomFx(); ph.at = state.wreck ? state.wreck.t : null; return ph;
+}
+
+// 選んだ車の目印（地面の枠）と隙間の表示
+var selFrame = (function () {
+  var tex = canvasTex(128, 256, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = '#ffd21a'; g.lineWidth = 14; g.setLineDash([26, 14]); g.strokeRect(8, 8, w - 16, h - 16); });
+  var m = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; m.renderOrder = 3; m.visible = false; scene.add(m); return m;
+})();
+var gapMarks = [];
+function gapLabelTex(text, color) {
+  return canvasTex(192, 80, function (g, w, h) { g.fillStyle = color; g.beginPath(); g.roundRect(4, 4, w - 8, h - 8, 16); g.fill(); g.fillStyle = '#fff'; g.font = '900 40px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, h / 2 + 2); });
+}
+function slackColor(sl) { return sl == null ? '#2f8a3c' : sl < 0.15 ? '#d8321b' : sl < 0.3 ? '#d08a00' : '#2f8a3c'; }
+function clearGapMarks() { gapMarks.forEach(function (o) { scene.remove(o); if (o.material.map) o.material.map.dispose(); o.material.dispose(); }); gapMarks.length = 0; }
+function showGapMarks(car) {
+  clearGapMarks();
+  var g = L.gaps(lot, car), sl = L.clawSlack(lot, car), nb = L.neighbors(lot, car);
+  [['left', -1], ['right', 1]].forEach(function (q) {
+    var side = q[0], sx = q[1], v = g[side]; if (v == null) return;
+    var col = slackColor(sl[side]);
+    var cx = car.x + sx * (car.type.W / 2 + v / 2), len = Math.min(car.type.L, nb[side].type.L) * 0.8;
+    var strip = new T.Mesh(new T.PlaneGeometry(Math.max(0.05, v), len), new T.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.55, depthWrite: false }));
+    strip.rotation.x = -Math.PI / 2; strip.position.set(cx, 0.03, car.z); strip.renderOrder = 3; scene.add(strip); gapMarks.push(strip);
+    var lab = new T.Sprite(new T.SpriteMaterial({ map: gapLabelTex(v.toFixed(2) + 'm', col), depthTest: false, transparent: true }));
+    lab.renderOrder = 8; lab.position.set(cx, 0.9, car.z + car.type.L * 0.25); lab.scale.set(1.9, 0.8, 1); scene.add(lab); gapMarks.push(lab);
+  });
+}
+
+// ------------------------------------------------------------------ 状態
+var lot = L.makeLot(SEED), models = {};
+var state = {
+  phase: 'title', round: 0, aimId: null, aim: null, clawType: null, car: null, rd: null, lift: null,
+  crane: L.makeCrane(0, 0.5), swing: L.makeSwing(), cable: L.CRANE.cableMin + 2,
+  tries: L.TRIES, results: [], closeT: 0, timer: 0, gripped: false, stopKind: null, descentHits: {},
+  fall: null, shake: 0, lastResult: null, input: { x: 0, z: 0 }, msgKey: '', landPos: null, refTotal: L.maxTotal(lot), hold: null
+};
+var pivotYaw = new T.Group(), pivotTilt = new T.Group(); pivotYaw.add(pivotTilt); Claw.group.add(pivotYaw);
+// 爪の寸法の元になる車種：掴んだ車 → 爪の真下の車（狙い）→ 最後に狙った車（通路の上でも爪の大きさを保つ）
+function curP() { return state.car ? state.car.type : state.aim ? state.aim.type : state.clawType; }
+var DEFAULT_TYPE = L.typeById('compact');
+
+function buildLotModels() {
+  for (var id in models) { var m = models[id]; m.group.removeFromParent(); m.body.removeFromParent(); if (m.tag) m.tag.removeFromParent(); disposeMerged(m.body); }
+  models = {};
+  lot.cars.forEach(function (car) { var m = models[car.id] = carModel(car); scene.add(m.group); updateTag(car); });
+}
+function disposeMerged(b) { b.traverse(function (o) { if (o.isMesh && o.userData.merged) o.geometry.dispose(); }); } // 車ごとにまとめた小物のジオメトリ（他は車種でキャッシュ共有）
+function removeCarModel(car) {
+  var m = models[car.id]; if (!m) return;
+  m.group.removeFromParent(); m.body.removeFromParent(); if (m.tag) m.tag.removeFromParent(); disposeMerged(m.body);
+  delete models[car.id];
+}
+// v2.4：狙い（爪の真下の車）の値札だけは出さない。情報は上のパネルで読む
+function refreshTags() { L.presentCars(lot).forEach(function (c) { updateTag(c); models[c.id].tag.visible = c.id !== state.aimId; }); }
+function tagShow(car, on) { var m = car && models[car.id]; if (m && m.tag) m.tag.visible = on; }
+
+function newGame() {
+  state.results.forEach(function (r) { if (r.photo && r.photo.url) URL.revokeObjectURL(r.photo.url); });
+  lot = L.makeLot(SEED); state.refTotal = L.maxTotal(lot); state.results = [];
+  fx.forEach(function (f) { f.o.removeFromParent(); }); fx.length = 0;
+  clearWrecks();
+  buildLotModels();
+}
+function startRound(i) {
+  // 前のラウンドで取った車・落とした車を片付ける
+  // 大破した車の残骸（黒焦げ）はその場に残す（v2.2）
+  lot.cars.forEach(function (c) { if (!c.present && !(models[c.id] && models[c.id].wreck)) removeCarModel(c); });
+  state.round = i; state.car = null; state.aim = null; state.aimId = null; state.clawType = null; state.lift = null; state.load = null;
+  state.rd = { car: null, value: 0, repairs: 0, log: [] };
+  state.crane = L.makeCrane(0, 0.6); state.swing = L.makeSwing(); state.cable = L.carryCable(DEFAULT_TYPE); // 通路の上から（駐車場のすぐ手前）
+  Claw.configure(null); Claw.setClose(0); state.closeT = 0;
+  state.tries = L.TRIES; state.gripped = false; state.fall = null; state.lastResult = null; state.landPos = null; state.photo = null; state.wreck = null;
+  $('photo').className = '';
+  selFrame.visible = false; clearGapMarks();
+  refreshTags();
+  // v2.1：選択フェーズは無し。最初からクレーンを動かせて、爪の真下の車がそのまま狙いになる
+  show('card', false); show('result', false); show('title', false); show('hud', true); show('ctl', true); show('gauges', false);
+  setPhase('move');
+  $('big').className = '';
+  banner('ROUND ' + (i + 1), '狙う車の真上へ', '爪の真下の車が狙い。掴んだら決定', 2.2);
+  updateHud();
+}
+function setPhase(ph) { state.phase = ph; state.timer = 0; updateAction(); }
+
+// ------------------------------------------------------------------ 狙い（爪の真下の車をライブで）
+function setAim(car) {
+  if (car === state.aim) return;
+  var prev = state.aim;
+  state.aim = car; state.aimId = car ? car.id : null;
+  if (prev && prev.present) { updateTag(prev); if (prev !== state.car) tagShow(prev, true); } // 狙いが外れたら値札を戻す
+  if (car) {
+    updateTag(car); tagShow(car, false); // v2.4：狙いが当たっている車の値札は消す
+    state.clawType = car.type; Claw.configure(car.type); Claw.setClose(0); // 爪が車の幅に合わせて開く
+    selFrame.visible = true; selFrame.position.set(car.x, 0.025, car.z); selFrame.scale.set(car.type.W + 0.5, car.type.L + 0.5, 1);
+    showGapMarks(car);
+    Sfx.aim();
+  } else { selFrame.visible = false; clearGapMarks(); }
+  updateHud(); updateAction();
+}
+var HINTS = { kei: '軽い。背が高いので隣の屋根より上まで上げてから動かそう', compact: '素直な車。重心は前寄り', sedan: '長くて重心が前寄り。真ん中より前を掴め', wagon: '長くて重い。後ろまで屋根が続く', open: '屋根がない。ドアの上を掴む。傷に弱い', sports: '低くて幅広、隙間が狭い。傷はとても高くつく' };
+/** 掴んだ時点で狙いが確定する */
+function lockTarget() {
+  var car = state.car = state.aim;
+  state.rd.car = car; state.rd.value = L.carValue(lot, car);
+  // 掴んだ車の値札と隙間の数字は片付ける（地面の隙間の色は引き抜きの目安に残す）
+  if (models[car.id] && models[car.id].tag) models[car.id].tag.visible = false;
+  gapMarks.forEach(function (o) { if (o.isSprite) o.visible = false; });
+  selFrame.visible = false;
+  banner(car.type.name + ' を掴む！', '¥' + state.rd.value + '万', HINTS[car.type.id], 2.2);
+  updateHud();
+}
+
+// ------------------------------------------------------------------ UI
+function show(id, on) { $(id).classList.toggle('show', !!on); }
+var bannerT = 0;
+function banner(r, t, s, dur) { $('bnR').textContent = r; $('bnT').textContent = t; $('bnS').textContent = s || ''; $('banner').classList.add('vis'); bannerT = dur; }
+function pop(text, sub, yFrac, hard) {
+  var d = document.createElement('div'); d.className = 'pop' + (hard ? ' hard' : ''); d.appendChild(document.createTextNode(text));
+  if (sub) { var s = document.createElement('small'); s.textContent = sub; d.appendChild(s); }
+  d.style.top = ((yFrac || 0.36) * 100) + '%';
+  $('pops').appendChild(d); setTimeout(function () { d.remove(); }, 2300);
+}
+function totalScore() { return state.results.reduce(function (a, r) { return a + r.score; }, 0); }
+function gapClass(g, sl) { return g == null ? 'wide' : sl < 0.15 ? 'tight' : sl < 0.3 ? 'mid' : 'wide'; }
+function updateHud() {
+  $('hRound').textContent = state.round + 1;
+  $('hScore').textContent = totalScore();
+  var car = state.car, rd = state.rd, aimBox = $('hAim');
+  var t = ''; for (var i = 0; i < L.TRIES; i++) t += i < state.tries ? '●' : '○';
+  $('hTries').textContent = rd ? 'のこり ' + t : '';
+  var c = $('hCond'); c.innerHTML = '';
+  if (!car) {
+    // 掴む前：爪の真下の車（狙い）の価値・囲まれ度・左右の隙間をライブで
+    var a = state.aim; aimBox.innerHTML = ''; $('hAimWrap').style.display = '';
+    if (!a) {
+      $('hName').textContent = '爪の下に車なし'; $('hVal').style.display = 'none';
+      aimBox.className = 'none'; aimBox.textContent = '車の真上へ動かすと狙いになる';
+    } else {
+      var s = L.surround(lot, a), g = L.gaps(lot, a), sl = L.clawSlack(lot, a);
+      $('hName').textContent = a.type.name; $('hVal').style.display = ''; $('hVal').textContent = '¥' + L.carValue(lot, a) + '万';
+      aimBox.className = '';
+      var st = document.createElement('span'); st.className = 'stars'; st.appendChild(document.createTextNode('★'.repeat(s.stars)));
+      var off = document.createElement('i'); off.textContent = '★'.repeat(4 - s.stars); st.appendChild(off); aimBox.appendChild(st);
+      var m = document.createElement('span'); m.textContent = '×' + s.mult.toFixed(2); aimBox.appendChild(m);
+      var gk = document.createElement('span'); gk.className = 'k'; gk.textContent = '隙間'; aimBox.appendChild(gk);
+      var gv = document.createElement('span');
+      [['左', g.left, sl.left], ['右', g.right, sl.right]].forEach(function (q, k) {
+        if (k) gv.appendChild(document.createTextNode(' '));
+        gv.appendChild(document.createTextNode(q[0]));
+        var b = document.createElement('b'); b.className = gapClass(q[1], q[2]); b.textContent = q[1] == null ? '空き' : q[1].toFixed(2) + 'm'; gv.appendChild(b);
+      });
+      aimBox.appendChild(gv);
+    }
+    if (rd && rd.repairs > 0) { var sb = document.createElement('span'); sb.className = 'bad'; sb.textContent = '弁償 −' + rd.repairs + '万'; c.appendChild(sb); }
+    return;
+  }
+  $('hAimWrap').style.display = 'none';
+  $('hName').textContent = car.type.name; $('hVal').style.display = ''; $('hVal').textContent = '¥' + rd.value + '万';
+  var ld = state.lift && state.lift.load;
+  if (ld) c.appendChild(document.createTextNode('状態：' + L.conditionLabel(ld.condition) + '（' + Math.round(ld.condition * 100) + '%）'));
+  if (rd.repairs > 0) { var s2 = document.createElement('span'); s2.className = 'bad'; s2.textContent = (ld ? '　' : '') + '弁償 −' + rd.repairs + '万'; c.appendChild(s2); }
+}
+var ACT = {
+  move: ['下ろす', '爪を下ろす'], lower: ['上げる', '下降を中止'], down: ['…', '自動で掴む'], closing: ['…', '掴み中'], closed: ['…', '自動で上げる'],
+  lift: ['…', '引き抜き中'], carry: ['置く', 'ゾーンの上で'], place: ['…', '下ろし中'], release: ['…', ''], fall: ['…', ''], get: ['…', ''], miss: ['…', '']
+};
+function updateAction() {
+  var a = ACT[state.phase] || ['…', ''], btn = $('act');
+  // v2.6：手で押すのは「下ろす」「下降の中止（車に届くまで）」「置く」だけ。届いた後の掴む・上げる・空振りの戻しは自動
+  var enabled = !!L.manualAction(state.phase, !!state.aim, L.inZone(state.crane.x, state.crane.z));
+  var label = a[0], sub = a[1];
+  if (state.phase === 'down' && !state.gripped) { label = '…'; sub = '自動で戻す'; }
+  if (state.phase === 'carry' && !enabled) { label = '運ぶ'; sub = 'ゾーンへ'; }
+  if (state.phase === 'move' && !enabled) { label = '下ろす'; sub = '車の上へ'; }
+  if (btn.dataset.label !== label + sub) { btn.innerHTML = ''; btn.appendChild(document.createTextNode(label)); var s = document.createElement('small'); s.textContent = sub; btn.appendChild(s); btn.dataset.label = label + sub; }
+  btn.disabled = !enabled;
+}
+function setMsg(key, text) { if (state.msgKey !== key) { state.msgKey = key; $('msg').textContent = text; } }
+
+var held = { u: false, d: false, l: false, r: false };
+function recomputeInput() { state.input.x = (held.r ? 1 : 0) - (held.l ? 1 : 0); state.input.z = (held.d ? 1 : 0) - (held.u ? 1 : 0); }
+['bU', 'bD', 'bL', 'bR'].forEach(function (id) {
+  var b = $(id), dir = b.dataset.dir;
+  var on = function (e) { e.preventDefault(); Sfx.init(); held[dir] = true; b.classList.add('on'); recomputeInput(); if (b.setPointerCapture && e.pointerId !== undefined) try { b.setPointerCapture(e.pointerId); } catch (er) {} };
+  var off = function () { held[dir] = false; b.classList.remove('on'); recomputeInput(); };
+  b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('lostpointercapture', off);
+  b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+});
+var KEYS = { ArrowUp: 'u', ArrowDown: 'd', ArrowLeft: 'l', ArrowRight: 'r', w: 'u', s: 'd', a: 'l', d: 'r' };
+window.addEventListener('keydown', function (e) {
+  if (KEYS[e.key]) { held[KEYS[e.key]] = true; recomputeInput(); e.preventDefault(); }
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (!e.repeat) { if (state.phase === 'title') startGame(); else action(); } }
+});
+window.addEventListener('keyup', function (e) { if (KEYS[e.key]) { held[KEYS[e.key]] = false; recomputeInput(); } });
+$('act').addEventListener('pointerdown', function (e) { e.preventDefault(); Sfx.init(); $('act').classList.add('on'); action(); });
+['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) { $('act').addEventListener(ev, function () { $('act').classList.remove('on'); }); });
+$('startBtn').addEventListener('click', function () { startGame(); });
+$('cBtn').addEventListener('click', function () { Sfx.init(); Sfx.click(); nextRound(); });
+$('againBtn').addEventListener('click', function () { Sfx.init(); Sfx.click(); newGame(); startRound(0); });
+function startGame() { Sfx.init(); Sfx.click(); newGame(); startRound(START_ROUND); }
+
+function action() {
+  var ph = state.phase, p = curP();
+  if (ph === 'move') {
+    if (!state.aim) return;
+    Sfx.beep();
+    state.crane.vx = state.crane.vz = 0; state.crane.cax = state.crane.caz = 0;
+    state.descentHits = {}; state.stopKind = null; state.gripped = false;
+    setPhase('lower');
+  } else if (ph === 'lower') {
+    // 下降の中止：車（または地面）に届くまでは巻き上げ直せる。従来の「やり直す」と同じく空の爪を戻す（1回分を使う）
+    Sfx.beep();
+    state.stopKind = 'abort'; state.gripped = false;
+    setPhase('liftEmpty');
+  } else if (ph === 'carry') actionCarry();
+}
+/** v2.6：車に届いた後の操作は自動。autoGrip＝爪を閉じる、autoHoist＝引き抜き開始、autoRetract＝掴めなかった爪を戻す */
+function autoAct(kind) {
+  var ph = state.phase;
+  if (kind === 'grip' && ph === 'down' && state.gripped) {
+    Sfx.beep();
+    // 掴む：この時点で狙いが確定。爪は車の幅の中心へ寄る（ケーブルが斜めになる）
+    lockTarget();
+    var end = L.clawEnd(state.crane, state.cable, state.swing);
+    state.lift = L.makeLift(lot, state.car, state.crane, state.cable, end.x, end.z, state.rd);
+    updateHud(); // 状態（100%）を表示
+    state.closeFrom = { tx: state.swing.tx, tz: state.swing.tz };
+    setPhase('closing');
+  } else if (kind === 'retract' && ph === 'down' && !state.gripped) {
+    setPhase('liftEmpty');
+  } else if (kind === 'hoist' && ph === 'closed') {
+    Sfx.beep();
+    attachPrize();
+    setPhase('lift');
+  }
+}
+function actionCarry() {
+  var ph = state.phase, p = curP();
+  if (ph === 'carry' && L.inZone(state.crane.x, state.crane.z)) {
+    Sfx.beep();
+    var lf = state.lift;
+    lf.placeCable = L.CRANE.topY - L.CRANE.clawH(p) - lf.top;
+    setPhase('place');
+  }
+}
+
+// 吊る：掴み点まわりに回転できるよう、pivotYaw → pivotTilt → body の階層に付け替える
+function attachPrize() {
+  var m = models[state.car.id], car = state.car;
+  pivotYaw.position.set(0, -L.CRANE.clawH(car.type), 0);
+  pivotYaw.rotation.set(0, car.yaw, 0); pivotTilt.rotation.set(0, 0, 0);
+  pivotTilt.add(m.body);
+  if (m.tag) m.tag.visible = false;
+  placeBodyUnderGrip();
+}
+function placeBodyUnderGrip() {
+  var m = models[state.car.id], car = state.car, lf = state.lift, ld = lf.load;
+  m.body.position.set(-(car.com[0] + ld.e[0]), -lf.top, -(car.com[1] + ld.e[1]));
+}
+
+// ------------------------------------------------------------------ 接触の演出
+function contactFx(ev, x, y, z) {
+  var hard = ev.kind === 'bump';
+  sparks(x, y, z, hard ? 60 : 26, hard ? 1.3 : 0.75);
+  if (hard) { Sfx.bang(); state.shake = Math.max(state.shake, 0.45); flash(0.9); } else { Sfx.scrape(); state.shake = Math.max(state.shake, 0.15); flash(0.35); }
+  addDecal(ev.car, x, y, z, hard);
+  updateTag(ev.car); // 値札は常時表示（傷で値下がりした値段に更新）
+  burst(x, y + 0.4, z, hard);
+  var sub = [];
+  if (ev.dmg > 0 && state.car) sub.push(state.car.type.name + ' −' + Math.round(ev.dmg * 100) + '%');
+  if (ev.repair > 0) sub.push('隣の' + ev.car.type.name + ' 弁償 −' + ev.repair + '万');
+  var head = ev.source === 'claw' ? (hard ? '爪が隣の車にガチン！' : '爪がこすった！') : (hard ? 'ぶつけた！' : 'こすった！');
+  pop(head, sub.join('　'), 0.47, hard);
+  updateHud();
+}
+var flashT = 0;
+function flash(a) { flashT = Math.max(flashT, a); }
+
+// ------------------------------------------------------------------ 更新
+function update(dt) {
+  var ph = state.phase, p = curP(), cr = state.crane, lf = state.lift;
+  state.timer += dt;
+  if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('vis'); }
+  if (flashT > 0) { flashT = Math.max(0, flashT - dt * 2.5); $('flash').style.opacity = flashT; }
+  if (ph === 'title') { titleCam(dt); stepFx(dt); return; }
+  var moving = false, hoisting = 0;
+  if (ph === 'move') {
+    L.stepCrane(cr, state.input, dt, false);
+    moving = Math.abs(cr.vx) + Math.abs(cr.vz) > 0.05;
+  } else if (!lf || (ph !== 'lift' && ph !== 'carry' && ph !== 'place')) { cr.ax = cr.az = 0; }
+  // 空の爪の揺れ
+  if (!lf || ph === 'lower' || ph === 'down' || ph === 'move' || ph === 'liftEmpty' || ph === 'miss') {
+    if (ph !== 'down' && ph !== 'closing' && ph !== 'closed') L.stepSwing(state.swing, cr.ax, cr.az, state.cable, null, dt);
+  }
+
+  if (ph === 'move') {
+    // 爪の真下の車がそのまま狙い（ライブで切り替わる）。爪の大きさはその車に合わせ、吊り高さもなめらかに追従
+    var endM = L.clawEnd(cr, state.cable, state.swing);
+    setAim(L.carUnder(lot, endM.x, endM.z));
+    var pc = curP() || DEFAULT_TYPE, cc = L.carryCable(pc);
+    state.cable += L.clamp(cc - state.cable, -3 * dt, 3 * dt);
+    if (state.aim) setMsg('moveAim' + state.aim.id, state.aim.type.name + 'の真上。指の着地点（白丸）が隣の車にかからないように');
+    else setMsg('move', '狙う車の真上へ。爪の真下の車が狙いになる');
+  } else if (ph === 'lower') {
+    state.cable += L.CRANE.lowerSpeed * dt; hoisting = 1;
+    var end = L.clawEnd(cr, state.cable, state.swing), hubY = end.y - L.CRANE.clawH(p);
+    var pr = L.clawProbe(lot, state.aim, end.x, end.z, hubY);
+    pr.hits.forEach(function (h) {
+      var prev = state.descentHits[h.car.id];
+      if (!prev || (prev === 'scrape' && h.kind === 'bump')) {
+        state.descentHits[h.car.id] = h.kind;
+        var ev = L.applyClawContact(lot, state.rd, h.car, h.kind);
+        contactFx(ev, h.x, Math.max(0.4, Math.min(h.y, L.topAtWorld(h.car, h.x, h.z) - 0.1)), h.z);
+      }
+    });
+    setMsg('lower', '爪を下ろしています…（届けば自動で掴む。「上げる」で中止）');
+    if (pr.stop) {
+      var cosA = Math.cos(state.swing.tx) * Math.cos(state.swing.tz);
+      state.cable = (L.CRANE.topY - L.CRANE.clawH(p) - pr.stopY) / Math.max(0.5, cosA);
+      state.stopKind = pr.stop; state.gripped = pr.stop === 'target';
+      state.swing.wx = state.swing.wz = 0;
+      Sfx.thud(0.4); if (pr.stop === 'ground') dust(end.x, end.z, 4, 1.5);
+      setPhase('down');
+    }
+  } else if (ph === 'down') {
+    var dm = { target: '屋根に届いた！自動で掴む', neighbor: '隣の車に乗り上げた！掴めない…自動で戻す', ownRoof: 'ずれすぎて指が屋根に乗った…掴めない。自動で戻す', ground: '地面に着いた…車から外れている。自動で戻す' };
+    setMsg('down' + state.stopKind, dm[state.stopKind] || '');
+    var an = L.autoNext('down', state.timer, state.gripped); if (an) autoAct(an); // v2.6：ボタン不要
+  } else if (ph === 'closing') {
+    state.closeT = Math.min(1, state.closeT + dt / 0.7); Claw.setClose(state.closeT);
+    // 爪が車の幅の中心へ寄っていく
+    var k = state.closeT * state.closeT * (3 - 2 * state.closeT);
+    state.swing.tx = state.closeFrom.tx + (lf.swing.tx - state.closeFrom.tx) * k; state.swing.tz = state.closeFrom.tz + (lf.swing.tz - state.closeFrom.tz) * k;
+    if (state.closeT >= 1) { Sfx.clank(); state.swing = lf.swing; setPhase('closed'); }
+  } else if (ph === 'closed') {
+    setMsg('closed', 'ガシッ！自動で真っ直ぐ引き抜く');
+    if (L.autoNext('closed', state.timer, true)) autoAct('hoist'); // v2.6：ボタン不要
+  } else if (ph === 'lift' || ph === 'carry' || ph === 'place') {
+    var evs = L.stepLift(lf, ph, state.input, dt);
+    state.cable = lf.cable; state.swing = lf.swing;
+    moving = Math.abs(cr.vx) + Math.abs(cr.vz) > 0.05;
+    hoisting = ph === 'lift' ? 0.6 : ph === 'place' ? 0.5 : 0;
+    evs.forEach(function (ev) { contactFx(ev, ev.x, ev.y, ev.z); });
+    if (ph === 'lift') {
+      setMsg(lf.load.slipping ? 'slip' : lf.inSlot ? 'liftSlot' : 'liftUp', lf.load.slipping ? 'すべってる！！' : lf.inSlot ? '引き抜き中…屋根を越えるまで動かさない！' : '隣の屋根を越えた！');
+      if (lf.load.detached) startFall(); else if (lf.cable <= L.carryCable(p) + 1e-6) setPhase('carry');
+    } else if (ph === 'carry') {
+      var inZ = L.inZone(cr.x, cr.z);
+      setMsg(inZ ? 'carryZ' : 'carry', inZ ? 'ゾーンの上！揺れが収まったら「置く」' : '黄色の回収ゾーンへ。急に動かすと揺れる！');
+      if (lf.load.detached) startFall();
+      updateAction();
+    } else {
+      setMsg('place', 'そっと下ろしています…');
+      if (lf.load.detached) startFall();
+      else if (lf.cable >= lf.placeCable - 1e-6) landPrize();
+    }
+    if (evs.length) updateHud();
+  } else if (ph === 'liftEmpty') {
+    state.cable = Math.max(L.carryCable(p), state.cable - 3.2 * dt); hoisting = 1;
+    setMsg('liftEmpty' + (state.stopKind === 'abort' ? 'A' : ''), state.stopKind === 'abort' ? '下降を中止。爪を戻しています…' : '掴めなかった…爪を戻しています');
+    if (state.cable <= L.carryCable(p) + 1e-6) { setPhase('miss'); Sfx.fail(); }
+  } else if (ph === 'release') {
+    setMsg('release', '回収ゾーンに置いた！');
+    state.closeT = Math.max(0, state.closeT - dt / 0.6); Claw.setClose(state.closeT);
+    if (state.closeT <= 0) state.cable = Math.max(L.carryCable(p), state.cable - 6 * dt);
+    if (state.timer > 1.4) roundEnd('get');
+  } else if (ph === 'miss') {
+    if (state.timer > 0.4) { state.tries--; updateHud(); if (state.tries > 0) { setPhase('move'); pop('掴めなかった', 'あと' + state.tries + '回', 0.38); } else roundEnd('miss'); }
+  } else if (ph === 'fallen' || ph === 'card' || ph === 'missed') {
+    stepFall(dt);
+  } else if (ph === 'fall') {
+    setMsg('fall', '落下！');
+    stepFall(dt);
+    state.cable = Math.max(L.carryCable(p), state.cable - 3 * dt);
+    if (state.timer > 0.4) { state.closeT = Math.max(0, state.closeT - dt / 0.5); Claw.setClose(state.closeT); }
+    if (state.timer > 3.0 && state.lastResult == null) roundEnd('fall');
+  }
+  Sfx.setLoop(Sfx.motor || {}, moving ? 0.07 + 0.05 * Math.hypot(cr.vx, cr.vz) / 4 : 0, 0.8 + 0.5 * Math.hypot(cr.vx, cr.vz) / 4);
+  Sfx.setLoop(Sfx.hoist || {}, hoisting * 0.06, ph === 'lift' ? 0.85 : 1.15);
+  stepFx(dt); stepWreck(dt);
+  // 失敗の写真：v2.5 は爆発のピーク（火の玉が最大で、部品が飛び散っている最中）に撮る
+  if (state.wreck) { state.wreck.t += dt; if (!state.photo && state.wreck.t >= WRECK_PHOTO_AT) state.photo = wreckPhoto(); }
+  updateGauges();
+}
+
+var WRECK_PHOTO_AT = 0.3; // v2.5：激突の 0.3 秒後＝火の玉が最大級のまま、部品が宙を飛び散っている最中（v2.2〜2.4 は 1.3 秒後の残骸写真）
+function landPrize() {
+  var p = curP(), lf = state.lift, ld = lf.load, car = state.car;
+  var sw = L.swingMag(lf.swing), tilt = Math.hypot(ld.phi[0], ld.phi[1]);
+  var d = L.applyLanding(ld, p, sw, tilt);
+  Sfx.thud(1);
+  var m = models[car.id], end = L.clawEnd(lf.crane, lf.cable, lf.swing);
+  // 地面に置き直す（向きはそのまま、傾きは戻す）
+  var gl = car.com[0] + ld.e[0], gw = car.com[1] + ld.e[1], off = L.toWorld(gl, gw, car.yaw);
+  m.group.position.set(end.x - off[0], 0, end.z - off[1]); m.group.rotation.set(0, car.yaw, 0);
+  m.group.add(m.body); m.body.position.set(0, 0, 0); m.body.rotation.set(0, car.flip < 0 ? Math.PI : 0, 0);
+  if (m.tag) m.tag.visible = false;
+  state.landPos = { x: m.group.position.x, z: m.group.position.z };
+  dust(state.landPos.x, state.landPos.z, 8, Math.max(p.L, p.W) * 0.6);
+  if (d > 0.005) { pop('ドスン！', '−' + Math.round(d * 100) + '%', 0.4); state.shake = 0.3; }
+  updateHud();
+  setPhase('release');
+}
+
+function startFall() {
+  var lf = state.lift, ld = lf.load, m = models[state.car.id], cr = lf.crane;
+  Sfx.fail();
+  scene.attach(m.body);
+  var s = lf.swing, c = lf.cable;
+  var v = new T.Vector3(cr.vx + s.wx * c * 0.45, 0, cr.vz + s.wz * c * 0.45);
+  state.fall = { v: v, axis: null, w: ld.cause === 'swing' ? 1.2 : 2.2, bounces: 0, settle: 0, done: false, h0: Math.max(0, bodyMinY()) };
+  var ax = new T.Vector3(-ld.phi[1], 0, ld.phi[0]);
+  if (ax.lengthSq() < 1e-8) ax.set(0, 0, 1);
+  ax.normalize().applyAxisAngle(new T.Vector3(0, 1, 0), state.car.yaw);
+  state.fall.axis = ax;
+  state.lastResult = null;
+  setPhase('fall');
+  pop(ld.cause === 'swing' ? '揺れすぎて落ちた！' : 'すべり落ちた！', '', 0.36, true);
+}
+var _box = new T.Box3(), _q = new T.Quaternion();
+function bodyMinY() { _box.setFromObject(models[state.car.id].body); return _box.min.y; }
+function stepFall(dt) {
+  var f = state.fall; if (!f || f.done) return;
+  var b = models[state.car.id].body, p = curP();
+  if (f.settling) {
+    f.settle += dt; var k = Math.min(1, f.settle / 0.35);
+    b.quaternion.slerp(f.qTarget, k * 0.5 + 0.1);
+    b.position.y += -bodyMinY();
+    if (k >= 1) { b.quaternion.copy(f.qTarget); b.position.y -= bodyMinY(); f.done = true; }
+    return;
+  }
+  f.v.y -= 9.8 * dt;
+  b.position.addScaledVector(f.v, dt);
+  b.quaternion.premultiply(_q.setFromAxisAngle(f.axis, f.w * dt));
+  var my = bodyMinY();
+  if (my < 0) {
+    b.position.y -= my;
+    var impact = Math.abs(f.v.y);
+    f.bounces++;
+    var kick = 0;
+    if (f.bounces === 1) {
+      // v2.2：地面に激突 → 大破・爆発。激しさは当たった速さと落ちた高さで決まる
+      var kp = L.wreckPower(impact, f.h0, p), wr = explode(models[state.car.id], state.car, kp);
+      state.wreck = { power: kp, impact: impact, h0: f.h0, t: 0, plan: wr.plan };
+      kick = 1.5 + 3 * kp; f.w += 1.5 * kp; // 爆風で車体が跳ね上がる
+      pop(kp > 0.6 ? '大爆発！！' : '大破！', '', 0.3, true);
+    } else Sfx.thud(0.6);
+    f.v.y = impact * 0.22 + kick; f.v.x *= 0.45; f.v.z *= 0.45; f.w *= 0.45;
+    if (f.bounces >= 2 || (impact < 3 && !kick)) {
+      var up = new T.Vector3(0, 1, 0), best = null, bd = -2;
+      [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].forEach(function (a) { var v = new T.Vector3(a[0], a[1], a[2]).applyQuaternion(b.quaternion); if (v.y > bd) { bd = v.y; best = new T.Vector3(a[0], a[1], a[2]); } });
+      var curUp = best.clone().applyQuaternion(b.quaternion);
+      f.qTarget = new T.Quaternion().setFromUnitVectors(curUp, up).multiply(b.quaternion.clone());
+      f.settling = true; f.settle = 0;
+    }
+  }
+}
+
+function roundEnd(kind) {
+  var car = state.car, rd = state.rd, lf = state.lift, res, who = car || state.aim;
+  var cond = kind === 'get' ? lf.load.condition : 0;
+  res = { kind: kind, name: who ? who.type.name : '—', value: rd.value, condition: cond, repairs: rd.repairs, score: L.score(kind === 'get' ? rd.value : 0, cond, rd.repairs),
+    cause: lf && lf.load && lf.load.cause, contacts: rd.log.map(function (e) { return e.source + ':' + e.kind; }) };
+  if ((kind === 'get' || kind === 'fall') && car) car.present = false; // 取った車・落とした車は駐車場から消える
+  if (kind === 'get') {
+    // GET の写真：回収ゾーンに収まった車を、紙吹雪の前に撮る
+    var gp = car.type, gm = models[car.id].group.position;
+    // v2.3：車の箱（足跡×高さ）に合わせて寄り、車の前（または後ろ）から斜め 42° の 3/4 ビューで撮る
+    var hl = L.toWorld(gp.L / 2, 0, car.yaw), hw = L.toWorld(0, gp.W / 2, car.yaw), ex = Math.abs(hl[0]) + Math.abs(hw[0]), ez = Math.abs(hl[1]) + Math.abs(hw[1]);
+    state.photo = capturePhoto('get', gm.x, gp.H * 0.45, gm.z, Math.max(gp.L, gp.W) * 1.25,
+      { box: { min: [gm.x - ex, 0, gm.z - ez], max: [gm.x + ex, gp.H, gm.z + ez] }, nose: L.toWorld(car.flip, 0, car.yaw) });
+    Sfx.get(); confetti(state.landPos.x, 4, state.landPos.z);
+  }
+  if (kind === 'fall' && state.wreck && !state.photo) state.photo = wreckPhoto();
+  res.photo = kind === 'miss' ? null : state.photo;
+  state.lastResult = res; state.results.push(res);
+  state.phase = kind === 'get' ? 'get' : kind === 'fall' ? 'fallen' : 'missed';
+  updateAction(); updateHud();
+  var bg = $('big'); bg.textContent = kind === 'get' ? 'GET!' : kind === 'fall' ? (state.wreck ? '大破…' : '落下…') : '取れず…'; bg.className = kind === 'get' ? 'vis' : 'vis fail';
+  setTimeout(function () { showCard(res); }, kind === 'get' ? 2200 : 1400);
+}
+function showCard(res) {
+  if (state.lastResult !== res) return;
+  $('cTitle').textContent = res.kind === 'get' ? res.name + ' GET！' : res.kind === 'fall' ? res.name + '、' + (res.photo ? '大破' : '落下') : res.name + '、取れず';
+  // v2.2：ポラロイド風の写真（GET＝ゾーンに収まった車／失敗＝v2.5 から爆発のピーク：火の玉と飛び散る部品）
+  var ph = $('photo');
+  if (res.photo) {
+    if (res.photo.url) $('pImg').src = res.photo.url; else $('pImg').removeAttribute('src'); // 変換が終わりしだい差し込まれる
+    $('pCapT').textContent = res.kind === 'get' ? res.name + ' GET!' : res.name + ' 大破…';
+    $('pCapS').textContent = (res.kind === 'get' ? '¥' + res.score + '万' : '落下 ' + Math.max(0.1, state.wreck ? state.wreck.h0 : 0).toFixed(1) + 'm') + '　' + res.photo.date;
+    ph.className = 'show' + (res.kind === 'get' ? '' : ' fail'); $('card').classList.add('wp');
+    $('big').className = ''; // 写真が主役。大きな文字は下げる
+  } else { ph.className = ''; $('card').classList.remove('wp'); }
+  var why, nScr = res.contacts.filter(function (c) { return /scrape/.test(c); }).length, nBmp = res.contacts.filter(function (c) { return /bump/.test(c); }).length;
+  if (res.kind === 'get') why = (nScr + nBmp ? '接触：こすった ' + nScr + '回・ぶつけた ' + nBmp + '回' : '接触なし！きれいに引き抜いた') + '　状態：' + L.conditionLabel(res.condition);
+  else if (res.kind === 'fall') why = (res.photo ? '地面に激突して爆発・大破。　' : '') + (res.cause === 'swing' ? '揺れが限界を超えて爪から外れた。動かし始めと止めるときはそっと。' : '重心からずれた所を掴んで傾き、すべり落ちた。車の真ん中より重い側（エンジン側）を掴もう。');
+  else why = '爪が屋根に届かなかった。指の着地点（白丸）が隣の車にかからない、真上を狙おう。';
+  $('cWhy').innerHTML = '';
+  why.split('　').forEach(function (t, k) { if (k) $('cWhy').appendChild(document.createElement('br')); var sp = document.createElement('span'); sp.textContent = t; if (res.kind === 'get') sp.className = 'nw'; $('cWhy').appendChild(sp); });
+  var cs = $('cScore'); cs.innerHTML = '';
+  var line = res.kind === 'get' ? '価値 ' + res.value + '万 × 状態 ' + Math.round(res.condition * 100) + '%' : '獲得 0';
+  if (res.repairs > 0) line += ' − 弁償 ' + res.repairs + '万';
+  var l1 = document.createElement('div'); l1.textContent = line; cs.appendChild(l1);
+  var l2 = document.createElement('div'); l2.appendChild(document.createTextNode('＝ '));
+  var b = document.createElement('b'); b.textContent = res.score; l2.appendChild(b); l2.appendChild(document.createTextNode(' 万円')); cs.appendChild(l2);
+  $('cBtn').textContent = state.results.length >= L.ROUNDS - START_ROUND ? '結果を見る' : '次のラウンドへ';
+  show('card', true); show('gauges', false); show('ctl', false);
+  state.phase = 'card';
+}
+function nextRound() {
+  show('card', false); $('big').className = '';
+  if (state.results.length >= L.ROUNDS - START_ROUND || L.presentCars(lot).length === 0) return showResult();
+  startRound(state.round + 1);
+}
+function showResult() {
+  state.phase = 'result';
+  var total = totalScore();
+  $('rTotal').innerHTML = ''; $('rTotal').appendChild(document.createTextNode('¥' + total)); var sm = document.createElement('small'); sm.textContent = '万円'; $('rTotal').appendChild(sm);
+  $('rRank').textContent = L.rank(total, state.refTotal);
+  var tb = $('rList'); tb.innerHTML = '';
+  state.results.forEach(function (r) {
+    var tr = document.createElement('tr');
+    var a = document.createElement('td'); a.textContent = r.name;
+    var b = document.createElement('td'); b.className = 'st'; b.textContent = (r.kind === 'get' ? L.conditionLabel(r.condition) : r.kind === 'fall' ? '落下' : '取れず') + (r.repairs ? '・弁償' + r.repairs : '');
+    var c = document.createElement('td'); c.textContent = r.score + '万'; if (r.score < 0) c.className = 'neg';
+    tr.appendChild(a); tr.appendChild(b); tr.appendChild(c); tb.appendChild(tr);
+  });
+  show('hud', false); show('ctl', false); show('gauges', false); show('result', true);
+  Sfx.get();
+}
+
+function updateGauges() {
+  var lf = state.lift, p = curP();
+  var on = !!lf && !lf.load.detached && (state.phase === 'lift' || state.phase === 'carry' || state.phase === 'place');
+  show('gauges', on);
+  if (!on) return;
+  var ld = lf.load, tilt = Math.hypot(ld.phi[0], ld.phi[1]), sw = L.swingMag(lf.swing);
+  var tMax = p.tiltLimit * 1.25, sMax = p.swingLimit * 1.25;
+  $('gTilt').style.width = Math.min(100, tilt / tMax * 100) + '%'; $('mTilt').style.left = (p.tiltLimit / tMax * 100) + '%';
+  $('gSwing').style.width = Math.min(100, sw / sMax * 100) + '%'; $('mSwing').style.left = (p.swingLimit / sMax * 100) + '%';
+  $('vTilt').textContent = (tilt / DEG).toFixed(0) + '°'; $('vSwing').textContent = (sw / DEG).toFixed(0) + '°';
+}
+
+// ------------------------------------------------------------------ 描画同期
+var CAM = { d: +(Q.get('cd') || 25), el: +(Q.get('cel') || 56) * DEG, moveD: +(Q.get('cmd') || 33), moveEl: 66 * DEG, moveZ: [-8.5, -3] };
+var zoomCur = 1, camPos = new T.Vector3(0, 30, 14), camLook = new T.Vector3(0, 0, -5), titleAng = 0;
+function titleCam(dt) {
+  titleAng += dt * 0.1;
+  camera.position.set(Math.sin(titleAng) * 30, 20, -4 + Math.cos(titleAng) * 30);
+  camera.lookAt(0, 0, -5);
+}
+var CAM_OVR = null;
+function sync(dt) {
+  var cr = state.crane;
+  crane3.bridge.position.x = cr.x; crane3.trolley.position.z = cr.z;
+  crane3.lamp.material.emissiveIntensity = Math.abs(cr.vx) + Math.abs(cr.vz) > 0.05 ? (Math.sin(performance.now() / 120) > 0 ? 2 : 0.2) : 0.3;
+  var tp = new T.Vector3(cr.x, L.CRANE.topY, cr.z), e = L.clawEnd(cr, state.cable, state.swing), end = new T.Vector3(e.x, e.y, e.z);
+  [[cableMesh, -0.3], [cable2, 0.3]].forEach(function (c) {
+    var a = tp.clone().add(new T.Vector3(c[1], 0.6, 0)), b2 = end.clone().add(new T.Vector3(c[1] * 0.6, 0, 0));
+    var mid = a.clone().add(b2).multiplyScalar(0.5), len = a.distanceTo(b2);
+    c[0].position.copy(mid); c[0].scale.set(1, len, 1);
+    c[0].quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), a.clone().sub(b2).normalize());
+  });
+  Claw.group.position.copy(end);
+  Claw.group.rotation.set(-state.swing.tz, 0, state.swing.tx);
+  var lf = state.lift;
+  if (lf && !lf.load.detached && (state.phase === 'lift' || state.phase === 'carry' || state.phase === 'place')) {
+    pivotTilt.rotation.set(-lf.load.phi[1], 0, lf.load.phi[0]);
+    placeBodyUnderGrip();
+  }
+  // 照準と指先の着地点
+  var aimOn = state.phase === 'move' || state.phase === 'lower';
+  laser.visible = aim.visible = aimOn; tipMarks.forEach(function (m) { m.visible = aimOn; });
+  var aimCar = state.aim;
+  // v2.6 修正：以前は curP()（狙い or 一度狙った車種）が無いと丸ごと飛ばしていたため、ラウンド開始から最初に車の上へ来るまで
+  // 印が初期表示の場所に置き去りだった。印・レーザー・指先は爪の真下へ毎フレーム必ず置く（車種が未定なら既定の爪の寸法）
+  if (aimOn) {
+    var p = curP(), topY = end.y - L.CRANE.clawH(p), mp = L.markerPos(cr, state.cable, state.swing);
+    var surf = function (x, z) { var y = 0.03; L.presentCars(lot).forEach(function (c) { if (L.inFootprint(c, x, z, 0)) y = Math.max(y, L.topAtWorld(c, x, z) + 0.04); }); return y; };
+    var hy = surf(e.x, e.z);
+    laser.position.set(e.x, (topY + hy) / 2, e.z); laser.scale.set(1, Math.max(0.01, topY - hy), 1);
+    var onT = aimCar && L.inFootprint(aimCar, e.x, e.z, 0);
+    aim.position.set(mp.x, hy, mp.z); aim.material.color.set(onT ? 0xffffff : 0xff9a8a);
+    aim.scale.setScalar(state.phase === 'lower' ? 0.8 : 1 + 0.08 * Math.sin(performance.now() / 160));
+    var reach = p ? L.clawReach(p) : 1.3, fz = p ? L.fingerZ(p) : 0.42, i = 0; // 車種未定は Claw.configure(null) と同じ既定値
+    for (var sx = -1; sx <= 1; sx += 2) for (var sz = -1; sz <= 1; sz += 2) {
+      var tx = e.x + sx * reach, tz = e.z + sz * fz, bad = null;
+      L.presentCars(lot).forEach(function (c) { if (L.inFootprint(c, tx, tz, L.CLAW.tipR)) bad = c; });
+      var mk = tipMarks[i++]; mk.position.set(tx, surf(tx, tz), tz);
+      mk.material.color.set(bad && bad !== aimCar ? 0xff2a14 : bad && bad === aimCar ? 0xffa040 : 0xffffff);
+    }
+  }
+  // 狙いの枠の点滅（v2.4：狙いの値札は出さないので、薄くする処理は不要）
+  if (selFrame.visible) selFrame.material.opacity = 0.6 + 0.4 * Math.sin(performance.now() / 180);
+  // カメラ
+  if (state.phase !== 'title') {
+    var ph = state.phase, fx0 = cr.x, fz0 = cr.z, zoom = 1, d = CAM.d, el = CAM.el, follow = 0.75;
+    {
+      // v2.1：空の爪を自由に動かす間は少し引いて、駐車場（全車の値札）が常に画面に入るように注視点を駐車場側へ寄せる
+      if (ph === 'move' || ph === 'miss') { fz0 = L.clamp(cr.z, CAM.moveZ[0], CAM.moveZ[1]); d = CAM.moveD; el = CAM.moveEl; follow = 0.55; }
+      if (ph === 'lower' || ph === 'down' || ph === 'closing' || ph === 'closed' || ph === 'lift' || ph === 'liftEmpty') { zoom = 0.68; follow = 0.9; }
+      if (ph === 'place' || ph === 'release' || ph === 'get') zoom = 0.8;
+      if ((ph === 'fall' || ph === 'fallen' || ph === 'card' || ph === 'missed') && state.fall && models[state.car.id]) {
+        var bp = models[state.car.id].body.getWorldPosition(new T.Vector3()); fx0 = bp.x; fz0 = bp.z; zoom = 0.8 + (state.wreck ? 0.3 * state.wreck.power : 0); follow = 1;
+      }
+      if (ph === 'card' && state.landPos && !state.fall) { fx0 = state.landPos.x; fz0 = state.landPos.z; zoom = 0.85; follow = 1; }
+    }
+    zoomCur += (zoom - zoomCur) * (1 - Math.exp(-dt * 2));
+    var look = new T.Vector3(fx0 * follow, 0, fz0);
+    var desired = look.clone().add(new T.Vector3(0, Math.sin(el) * d * zoomCur, Math.cos(el) * d * zoomCur));
+    var k = 1 - Math.exp(-dt * 2.5);
+    camPos.lerp(desired, k); camLook.lerp(look, k);
+    camera.position.copy(camPos);
+    if (state.shake > 0) { state.shake = Math.max(0, state.shake - dt * (state.shake > 1 ? 1.6 : 1)); var a = state.shake * 0.7; camera.position.x += (Math.random() - 0.5) * a; camera.position.y += (Math.random() - 0.5) * a; camera.position.z += (Math.random() - 0.5) * a * 0.5; }
+    camera.lookAt(camLook);
+    if (state.shake > 0.6) camera.rotation.z += (Math.random() - 0.5) * 0.04 * state.shake; // 大きな揺れは画面の傾きも
+  }
+  if (CAM_OVR) { camera.position.set(CAM_OVR[0], CAM_OVR[1], CAM_OVR[2]); camera.lookAt(CAM_OVR[3], CAM_OVR[4], CAM_OVR[5]); } // 確認用（__crane.cam）
+  sun.target.position.set(cr.x * 0.3, 0, -4); sun.position.set(cr.x * 0.3 - 18, 34, 10);
+}
+
+// ------------------------------------------------------------------ ループ
+var HIRES = false, PAUSED = false;
+function adaptResolution(rawDt) {
+  if (FIXED_PR || HIRES) return;
+  frameAvg += (rawDt * 1000 - frameAvg) * 0.1; prCooldown -= rawDt;
+  if (prCooldown > 0) return;
+  var next = curPR;
+  if (frameAvg > 40 && curPR > 0.5) next = Math.max(0.5, curPR * 0.8);
+  else if (frameAvg < 18 && curPR < maxPR) next = Math.min(maxPR, curPR * 1.15);
+  if (next !== curPR) { curPR = next; renderer.setPixelRatio(curPR); renderer.setSize(W, H, false); prCooldown = 1.0; }
+}
+// v2.6 確認用：描画したフレームごとに、地面の丸い印と爪（の吊り点）の実際の描画位置を記録する
+var TRACE = null;
+function traceFrame() {
+  var c = Claw.group.position, under = L.carUnder(lot, c.x, c.z);
+  TRACE.push({ t: performance.now(), phase: state.phase, vis: aim.visible, mx: aim.position.x, mz: aim.position.z, cx: c.x, cz: c.z, onCar: !!under, aimId: state.aimId, cable: state.cable });
+}
+var clock = new T.Clock();
+function frame() {
+  var raw = clock.getDelta(), dt = Math.min(0.1, raw);
+  adaptResolution(Math.min(raw, 0.5));
+  var n = Math.max(1, Math.ceil(dt / (1 / 60))), h = dt / n;
+  if (!PAUSED) { for (var i = 0; i < n; i++) update(h); sync(dt); renderer.render(scene, camera); if (TRACE) traceFrame(); }
+  requestAnimationFrame(frame);
+}
+window.addEventListener('resize', resize);
+
+buildLotModels();
+L.presentCars(lot).forEach(function (c) { models[c.id].tag.visible = false; });
+show('title', true);
+
+// 自動テスト用の読み取り口（ゲーム進行には影響しない）
+var _pv = new T.Vector3();
+window.__crane = {
+  get phase() { return state.phase; },
+  info: function () {
+    var lf = state.lift, ld = lf && lf.load, cr = state.crane, car = state.car, e = L.clawEnd(cr, state.cable, state.swing);
+    return {
+      render: { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, texs: renderer.info.memory.textures, frameAvg: frameAvg }, carMeshes: (function () { var n = 0; for (var id in models) models[id].body.traverse(function (o) { if (o.isMesh) n++; }); return n; })(),
+      round: state.round, seed: SEED, tries: state.tries, audio: Sfx.ctx ? Sfx.ctx.state : null, selId: state.aimId, aimId: state.aimId,
+      aim: state.aim && (function (a) { var g = L.gaps(lot, a), s = L.surround(lot, a); return { id: a.id, type: a.type.id, x: a.x, z: a.z, com: L.comWorld(a), value: L.carValue(lot, a), stars: s.stars, mult: s.mult, gaps: g }; })(state.aim),
+      hud: { name: $('hName').textContent, val: $('hVal').style.display === 'none' ? '' : $('hVal').textContent, aim: $('hAimWrap').style.display === 'none' ? '' : $('hAim').textContent },
+      crane: { x: cr.x, z: cr.z, vx: cr.vx, vz: cr.vz }, cable: state.cable, claw: { x: e.x, y: e.y, z: e.z }, gripped: state.gripped, stopKind: state.stopKind,
+      target: car && { id: car.id, type: car.type.id, x: car.x, z: car.z, com: L.comWorld(car), value: state.rd.value, flip: car.flip },
+      clawType: curP() ? curP().id : null,
+      cars: lot.cars.map(function (c) { return { id: c.id, type: c.type.id, row: c.row, col: c.col, x: c.x, z: c.z, present: c.present, value: L.carValue(lot, c), damage: c.damage, stars: L.surround(lot, c).stars }; }),
+      inZone: L.inZone(cr.x, cr.z), swingDeg: L.swingMag(state.swing) / DEG,
+      swingAmpDeg: (function () { var s = state.swing, w = lf ? L.swingOmega(car.type, state.cable) : Math.sqrt(9.8 / L.swingLeff(null, state.cable)); return Math.hypot(Math.hypot(s.tx, s.wx / w), Math.hypot(s.tz, s.wz / w)) / DEG; })(),
+      load: ld && { e: ld.e.slice(), tiltDeg: Math.hypot(ld.phi[0], ld.phi[1]) / DEG, maxTiltDeg: ld.maxTilt / DEG, maxSwingDeg: ld.maxSwing / DEG, slipping: ld.slipping, detached: ld.detached, cause: ld.cause || null, condition: ld.condition, inSlot: lf.inSlot, bottomY: L.loadBottomY(lf) },
+      repairs: state.rd ? state.rd.repairs : 0, contacts: state.rd ? state.rd.log.map(function (ev) { return { source: ev.source, kind: ev.kind, carId: ev.carId, dmg: ev.dmg, repair: ev.repair }; }) : [],
+      results: state.results.map(function (r) { return { kind: r.kind, score: r.score, condition: r.condition, repairs: r.repairs, value: r.value }; }),
+      total: totalScore(), refTotal: state.refTotal,
+      tagsVisible: { present: L.presentCars(lot).length, shown: L.presentCars(lot).filter(function (c) { return models[c.id] && models[c.id].tag && models[c.id].tag.visible; }).length, aimShown: !!(state.aim && models[state.aim.id] && models[state.aim.id].tag && models[state.aim.id].tag.visible), hiddenIds: L.presentCars(lot).filter(function (c) { return !(models[c.id] && models[c.id].tag && models[c.id].tag.visible); }).map(function (c) { return c.id; }) }, decals: Object.keys(models).reduce(function (a, k) { return a + models[k].decals.length; }, 0),
+      actLabel: $('act').textContent, actDisabled: $('act').disabled,
+      wreck: state.wreck && { power: state.wreck.power, impact: state.wreck.impact, h0: state.wreck.h0, t: state.wreck.t, parts: models[state.car.id] && models[state.car.id].wreck ? models[state.car.id].wreck.parts : 0, boom0: models[state.car.id] && models[state.car.id].wreck ? models[state.car.id].wreck.boom0 : 0, light0: models[state.car.id] && models[state.car.id].wreck ? models[state.car.id].wreck.light0 : 0, plan: state.wreck.plan },
+      wrecks: Object.keys(models).filter(function (k) { return models[k].wreck; }).length, debris: debris.length, debrisFlying: debris.filter(function (d) { return !d.rest; }).length,
+      fxCount: fx.length, fire: fx.filter(function (f) { return f.kind === 'fire' || f.kind === 'fireball'; }).length, smoke: fx.filter(function (f) { return f.kind === 'smoke'; }).length, shake: state.shake,
+      photo: state.photo && { kind: state.photo.kind, len: state.photo.size, ready: !!state.photo.url, ms: state.photo.ms, prof: state.photo.prof, cam: state.photo.cam, boom: state.photo.boom, at: state.photo.at }, boomFx: boomFx(), photoAt: WRECK_PHOTO_AT, photoCount: photoCount,
+      preserveDrawingBuffer: renderer.getContext().getContextAttributes().preserveDrawingBuffer,
+      fallDone: !!(state.fall && state.fall.done), bodyY: car && models[car.id] ? models[car.id].body.getWorldPosition(new T.Vector3()).y : null
+    };
+  },
+  /** 車の屋根の中心の画面座標（クライアント座標）。テストが本物のタップを送るため */
+  screenPos: function (id) {
+    var c = lot.cars[id]; _pv.set(c.x, c.type.H * 0.6, c.z).project(camera);
+    var r = canvas.getBoundingClientRect();
+    return { x: r.left + (_pv.x + 1) / 2 * r.width, y: r.top + (1 - _pv.y) / 2 * r.height };
+  },
+  /** 運転の自動テスト用：クレーン・振り子の生の状態（読むだけ） */
+  driveState: function () {
+    var cr = state.crane, s = state.swing, p = curP();
+    return { crane: { x: cr.x, z: cr.z, vx: cr.vx, vz: cr.vz, cax: cr.cax || 0, caz: cr.caz || 0, ax: cr.ax, az: cr.az }, swing: { tx: s.tx, tz: s.tz, wx: s.wx, wz: s.wz }, cable: state.cable, type: state.lift && p ? p.id : null };
+  },
+  appRect: function () { var r = app.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; },
+  pixelRatio: function () { return renderer.getPixelRatio(); },
+  /** スクリーンショット用：一瞬だけ進行を止める（描画は続く） */
+  // v2.4 確認用：クレーン構造物（トロリー以外）が駐車場の奥端より手前に出ていないか・半透過の部材が無いか
+  craneLayout: function () {
+    var out = { meshes: 0, frontMeshes: 0, transparent: 0, maxZ: -1e9, trolleyMeshes: 0 }, bb = new T.Box3();
+    crane3.bridge.updateMatrixWorld(true);
+    crane3.bridge.traverse(function (o) {
+      if (!o.isMesh) return;
+      var inT = false; for (var q = o; q; q = q.parent) if (q === crane3.trolley) inT = true;
+      if (o.material.transparent || o.material.opacity < 1) out.transparent++;
+      if (inT) { out.trolleyMeshes++; return; }
+      out.meshes++; bb.setFromObject(o); out.maxZ = Math.max(out.maxZ, bb.max.z); if (bb.max.z > LOT.z0) out.frontMeshes++;
+    });
+    out.lotBackZ = LOT.z0; out.railZ = crane3.railZ; return out;
+  },
+  /** v2.6：trace(true) で記録開始、trace(false) で記録を返して停止 */
+  trace: function (on) { if (on) { TRACE = []; return 0; } var r = TRACE || []; TRACE = null; return r; },
+  pause: function (on) { PAUSED = !!on; if (!on) clock.getDelta(); },
+  tags: function (on) { for (var k in models) if (models[k].tag) models[k].tag.visible = !!on; renderer.render(scene, camera); }, // OGP 撮影用：値札をまとめて隠す／出す（一時停止中に使う）
+  cam: function (v) { CAM_OVR = v || null; sync(0); renderer.render(scene, camera); }, // 確認用：[x,y,z, 注視x,y,z] でカメラを固定（null で戻す）
+  hiRes: function (on) { HIRES = !!on; renderer.setPixelRatio(on ? maxPR : curPR); renderer.setSize(W, H, false); renderer.render(scene, camera); }
+};
+
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

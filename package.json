@@ -1,0 +1,24 @@
+{
+  "name": "real-crane-game",
+  "version": "2.6.0",
+  "private": true,
+  "license": "MIT",
+  "description": "現実版クレーンゲーム 駐車場編：駐車場の車を巨大ガントリークレーンで吊り上げて運ぶ3Dミニゲーム",
+  "scripts": {
+    "build": "node build.js",
+    "serve": "npx --yes http-server -p 8080 -c-1 .",
+    "test": "node --test tests/logic.test.js",
+    "test:screens": "node tests/screens.js",
+    "test:explode": "node tests/explode.js",
+    "test:v26": "node tests/v26.js",
+    "models": "node tests/models.js",
+    "sway": "node tests/sway_measure.js",
+    "ogp": "node tools/ogp/make-ogp.mjs",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.65.1",
+    "three": "0.187.0",
+    "wrangler": "^4.167.0"
+  }
+}

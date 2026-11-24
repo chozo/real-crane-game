@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#ffcc1a"/>
+  <!-- 梁とトロリー -->
+  <rect x="6" y="9" width="52" height="7" rx="3" fill="#1d1a14"/>
+  <rect x="24" y="13" width="16" height="8" rx="2.5" fill="#e8452c" stroke="#1d1a14" stroke-width="2.5"/>
+  <!-- ケーブル -->
+  <rect x="30" y="21" width="4" height="12" fill="#1d1a14"/>
+  <!-- 爪 -->
+  <rect x="21" y="31" width="22" height="7" rx="3.5" fill="#e8452c" stroke="#1d1a14" stroke-width="2.5"/>
+  <path d="M24 38 L15 48 L20 57" fill="none" stroke="#1d1a14" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M40 38 L49 48 L44 57" fill="none" stroke="#1d1a14" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M32 38 L32 52" fill="none" stroke="#1d1a14" stroke-width="5" stroke-linecap="round"/>
+</svg>

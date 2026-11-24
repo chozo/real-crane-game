@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.wrangler/
+.DS_Store
+tests/screenshots/
+tests/tmp/
+tools/ogp/out/
+# build.js が dist/ と同じ内容をルートにも書く（ローカル確認用の生成物）
+/index.html
