@@ -2,8 +2,8 @@
 
 駐車場にびっしり停まった本物サイズの車を、巨大ガントリークレーンで1台ずつ釣り上げて回収ゾーンへ運ぶ 3D ミニWebゲーム（Three.js 製・縦型 9:16・単一ファイル HTML）。全5ラウンド。囲まれた車ほど高いが、隣にぶつけたら弁償。
 
-- 公開URL（予定）：https://game.chozo.net/real-crane-game/
-- GitHub（予定）：https://github.com/chozo/real-crane-game
+- 公開URL：https://game.chozo.net/real-crane-game/
+- GitHub：https://github.com/chozo/real-crane-game
 
 ## 遊び方
 
@@ -43,6 +43,7 @@ npm run ogp                 # public/ogp.png と apple-touch-icon.png を作り�
 ## 公開
 
 - slug は `real-crane-game`（2026-11-24 ユーザー決定）
+- 2026-11-24 に初公開（GitHub `chozo/real-crane-game` に push、Cloudflare にデプロイ）。公開URLで 200・favicon・OGP 画像・og:image、末尾スラッシュなしの転送（307）、公開ページでの開始と移動・JS エラー 0 を確認。ゲーム一覧（game.chozo.net のトップ）にはまだ載せていない
 - Cloudflare Workers + Static Assets（Worker 名 `real-crane-game`、`wrangler.jsonc`）。`game.chozo.net/real-crane-game` と `game.chozo.net/real-crane-game/*` のルートだけを担当し、workers.dev は使わない。配信するのは `dist/` で、`dist/real-crane-game/` が `/real-crane-game/` に対応する
 - 公開手順：`npm run deploy`（= ビルド → `wrangler deploy`）。事前に `npx wrangler deploy --dry-run` で確認できる
 - OGP：`index.html` に og:* と twitter:card を記載。og:image は `https://game.chozo.net/real-crane-game/ogp.png`
